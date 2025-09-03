@@ -1,0 +1,1089 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Inventário de Máquinas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent-primary: #4361ee;
+            --accent-secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --danger: #e63946;
+            --border-color: #dee2e6;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        .dark-theme {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --border-color: #343a40;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            transition: var(--transition);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .header-left h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: var(--accent-primary);
+        }
+
+        .header-left p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            width: 60px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .dark-theme .theme-toggle::before {
+            transform: translateX(30px);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-search {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .filter-select {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+            min-width: 180px;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-card i {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--accent-primary);
+        }
+
+        .stat-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .machine-card {
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .machine-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-ok {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: #4cc9f0;
+        }
+
+        .status-warning {
+            background-color: rgba(247, 37, 133, 0.2);
+            color: #f72585;
+        }
+
+        .status-critical {
+            background-color: rgba(230, 57, 70, 0.2);
+            color: #e63946;
+        }
+
+        .card-body {
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-label i {
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-normal {
+            background-color: var(--success);
+        }
+
+        .progress-warning {
+            background-color: var(--warning);
+        }
+
+        .progress-danger {
+            background-color: var(--danger);
+        }
+
+        .card-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-secondary);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-primary);
+        }
+
+        /* Modal de detalhes */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalFadeIn 0.3s;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-modal {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+
+        .close-modal:hover {
+            opacity: 0.8;
+        }
+
+        .modal-body {
+            padding: 25px;
+            max-height: calc(90vh - 140px);
+            overflow-y: auto;
+        }
+
+        .detail-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .detail-section h4 {
+            margin-bottom: 15px;
+            color: var(--accent-primary);
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .sensor-item {
+            background-color: var(--bg-primary);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 100;
+            padding: 15px;
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .refresh-btn:hover {
+            background-color: var(--accent-secondary);
+            transform: rotate(90deg);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-style: italic;
+            color: var(--text-secondary);
+            grid-column: 1 / -1;
+        }
+
+        .error {
+            color: var(--danger);
+            font-weight: 600;
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--border-color);
+        }
+
+        @media (max-width: 768px) {
+            .machines-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .header-right {
+                justify-content: center;
+            }
+
+            .filter-search {
+                flex-direction: column;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1><i class="fas fa-server"></i> Dashboard de Inventário</h1>
+                <p>Monitoramento de recursos do sistema em tempo real</p>
+            </div>
+            <div class="header-right">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema"></button>
+                <span id="machine-count">0 máquinas</span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="filter-search">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Pesquisar máquinas...">
+                </div>
+                <select id="status-filter" class="filter-select">
+                    <option value="all">Todos os status</option>
+                    <option value="OK">OK</option>
+                    <option value="Atenção">Atenção</option>
+                    <option value="Crítico">Crítico</option>
+                </select>
+                <select id="sort-by" class="filter-select">
+                    <option value="hostname">Ordenar por: Nome</option>
+                    <option value="status">Ordenar por: Status</option>
+                    <option value="timestamp">Ordenar por: Data</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats-cards">
+            <div class="stat-card">
+                <i class="fas fa-desktop"></i>
+                <h3 id="total-machines">0</h3>
+                <p>Máquinas Monitoradas</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <h3 id="ok-machines">0</h3>
+                <p>Máquinas com Status OK</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3 id="warning-machines">0</h3>
+                <p>Máquinas com Atenção</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-exclamation-circle"></i>
+                <h3 id="critical-machines">0</h3>
+                <p>Máquinas Críticas</p>
+            </div>
+        </div>
+
+        <div id="machines-container" class="machines-grid">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Carregando dados das máquinas...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para detalhes da máquina -->
+    <div id="machine-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-server"></i> <span id="modal-title">Detalhes da Máquina</span></h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Conteúdo será preenchido via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <button id="refresh-btn" class="refresh-btn" aria-label="Atualizar dados">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <script>
+        // Variáveis globais
+        let allMachines = [];
+        let currentTheme = localStorage.getItem('theme') || 'light';
+        const modal = document.getElementById('machine-modal');
+
+        // Aplicar tema salvo
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+
+
+        // Função para carregar dados das máquinas
+        async function loadMachinesData() {
+            try {
+                allMachines = [];
+                showLoading();
+
+                // Para demonstração, usando dados de exemplo
+                // Em produção, substituir pelo código de carregamento real
+                const manifestResponse = await fetch('manifest.json');
+                if (!manifestResponse.ok) {
+                    throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const manifest = await manifestResponse.json();
+                console.log('Manifest carregado:', manifest);
+                for (const entry of manifest) {
+                    try {
+                        const machineResponse = await fetch(entry.Json);
+                        if (!machineResponse.ok) {
+                            console.error(`Erro ao carregar ${entry.Json}: ${machineResponse.status}`);
+                            continue;
+                        }
+
+                        const machineData = await machineResponse.json();
+                        console.log(`Dados da máquina ${entry.Hostname}:`, machineData);
+
+                        allMachines.push(machineData);
+                    } catch (error) {
+                        console.error(`Erro ao processar máquina ${entry.Hostname}:`, error);
+                    }
+                }
+
+                // Simular um pequeno atraso no carregamento
+                setTimeout(() => {
+                    updateStats();
+                    renderMachines(allMachines);
+                }, 500);
+
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                showError(error);
+            }
+        }
+
+        // Função para renderizar as máquinas
+        function renderMachines(machines) {
+            const container = document.getElementById('machines-container');
+
+            if (!machines || machines.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            container.innerHTML = '';
+
+            machines.forEach(machine => {
+
+                const card = createMachineCard(machine);
+                container.appendChild(card);
+            });
+        }
+
+        // Função para criar o card de uma máquina
+        function createMachineCard(machine) {
+            const card = document.createElement('div');
+            card.className = 'machine-card';
+            card.id = `machine-${machine.Hostname}`;
+
+            // Determina a classe de status
+            let statusClass = 'status-ok';
+            if (machine.Status === 'Atenção') statusClass = 'status-warning';
+            if (machine.Status === 'Crítico') statusClass = 'status-critical';
+
+            // Encontra o volume do sistema (C:)
+            const systemDrive = machine.Storage?.Volumes?.find(v => v.DriveLetter === 'C') ||
+                (machine.Storage?.Volumes?.length > 0 ? machine.Storage.Volumes[0] : null);
+
+            // Formata a data
+            const formattedDate = formatDate(machine.TimestampUtc);
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <h3>${machine.Hostname}</h3>
+                    <span class="status-badge ${statusClass}">${machine.Status}</span>
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-desktop"></i> Sistema Operacional</div>
+                        <div>${machine.OS?.Caption || 'N/A'}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-microchip"></i> Processador</div>
+                        <div>${machine.CPU?.Name || 'N/A'}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-memory"></i> Memória RAM</div>
+                        <div>${machine.RAM?.TotalGB || 'N/A'} GB (${machine.RAM?.FreeGB || 'N/A'} GB livre)</div>
+                        ${machine.RAM?.FreePercent ? `
+                            <div class="progress-bar">
+                                <div class="progress-fill ${getProgressClass(100 - machine.RAM.FreePercent)}" 
+                                     style="width: ${100 - machine.RAM.FreePercent}%"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${systemDrive ? `
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-hdd"></i> Armazenamento (${systemDrive.DriveLetter})</div>
+                        <div>Livre: ${systemDrive.FreeGB} GB de ${systemDrive.SizeGB} GB</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${getProgressClass(100 - systemDrive.FreePercent)}" 
+                                 style="width: ${100 - systemDrive.FreePercent}%"></div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${machine.Temps?.MaxC ? `
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-thermometer-half"></i> Temperatura</div>
+                        <div>Máxima: ${machine.Temps.MaxC}°C</div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="card-footer">
+                    <span class="timestamp">${formattedDate}</span>
+                    <button class="btn btn-outline view-details-btn" data-hostname="${machine.Hostname}">
+                        <i class="fas fa-info-circle"></i> Detalhes
+                    </button>
+                </div>
+            `;
+
+            // Adicionar evento ao botão de detalhes
+            const detailsBtn = card.querySelector('.view-details-btn');
+            detailsBtn.addEventListener('click', () => {
+                showMachineDetails(machine);
+            });
+
+            return card;
+        }
+
+        // Função para exibir os detalhes da máquina em um modal
+        function showMachineDetails(machine) {
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+
+            modalTitle.textContent = machine.Hostname;
+            modalBody.innerHTML = createDetailsContent(machine);
+
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Impede scroll da página principal
+        }
+
+        // Função para obter a classe de progresso com base no percentual
+        function getProgressClass(percent) {
+            if (percent > 90) return 'progress-danger';
+            if (percent > 75) return 'progress-warning';
+            return 'progress-normal';
+        }
+
+        // Função para criar o conteúdo detalhado
+        function createDetailsContent(machine) {
+
+            let detailsHTML = '';
+
+            // Informações do Sistema Operacional
+            detailsHTML += `
+                <div class="detail-section">
+                    <h4><i class="fas fa-desktop"></i> Sistema Operacional</h4>
+                    <p><strong>Nome:</strong> ${machine.OS?.Caption || 'N/A'}</p>
+                    <p><strong>Versão:</strong> ${machine.OS?.Version || 'N/A'}</p>
+                    <p><strong>Build:</strong> ${machine.OS?.Build || 'N/A'}</p>
+                    <p><strong>Arquitetura:</strong> ${machine.OS?.Architecture || 'N/A'}</p>
+                    <p><strong>Instalado em:</strong> ${formatDateMS(machine.OS?.InstallDate) || 'N/A'}</p>
+                    <p><strong>Último boot:</strong> ${formatDateMS(machine.OS?.LastBoot) || 'N/A'}</p>
+                    <p><strong>Uptime:</strong> ${machine.OS?.Uptime || 'N/A'}</p>
+                </div>
+            `;
+
+            // Informações do Hardware
+            detailsHTML += `
+                <div class="detail-section">
+                    <h4><i class="fas fa-microchip"></i> Processador</h4>
+                    <p><strong>Nome:</strong> ${machine.CPU?.Name || 'N/A'}</p>
+                    <p><strong>Núcleos:</strong> ${machine.CPU?.Cores || 'N/A'} cores, ${machine.CPU?.Logical || 'N/A'} threads</p>
+                    <p><strong>Clock Máximo:</strong> ${machine.CPU?.MaxClockMHz || 'N/A'} MHz</p>
+                </div>
+                
+                <div class="detail-section">
+                    <h4><i class="fas fa-memory"></i> Memória RAM</h4>
+                    <p><strong>Total:</strong> ${machine.RAM?.TotalGB || 'N/A'} GB</p>
+                    <p><strong>Livre:</strong> ${machine.RAM?.FreeGB || 'N/A'} GB (${machine.RAM?.FreePercent || 'N/A'}%)</p>
+            `;
+
+            if (machine.RAM?.Modules && machine.RAM.Modules.length > 0) {
+                detailsHTML += `<h5>Módulos:</h5>`;
+                machine.RAM.Modules.forEach(module => {
+                    detailsHTML += `
+                        <div style="margin-left: 20px; margin-bottom: 10px;">
+                            <p><strong>Banco:</strong> ${module.Bank || 'N/A'}</p>
+                            <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
+                            <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
+                            <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
+                            <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
+                            <p><strong>S/N:</strong> ${module.Part || 'N/A'}</p>
+                        </div>
+                    `;
+                });
+            }
+
+            detailsHTML += `</div>`;
+
+            // Informações de Armazenamento
+            if (machine.Storage) {
+                detailsHTML += `
+                    <div class="detail-section">
+                        <h4><i class="fas fa-hdd"></i> Armazenamento</h4>
+                        ${machine.Storage.Volumes && machine.Storage.Volumes.length > 0 ? `
+                            <h5>Volumes:</h5>
+                            ${machine.Storage.Volumes.map(volume => `
+                                <div style="margin-left: 20px; margin-bottom: 15px;">
+                                    <p><strong>Unidade:</strong> ${volume.DriveLetter || 'N/A'}</p>
+                                    <p><strong>Rótulo:</strong> ${volume.Label || 'N/A'}</p>
+                                    <p><strong>Sistema de Arquivos:</strong> ${volume.FileSystem || 'N/A'}</p>
+                                    <p><strong>Tamanho:</strong> ${volume.SizeGB || 'N/A'} GB</p>
+                                    <p><strong>Livre:</strong> ${volume.FreeGB || 'N/A'} GB (${volume.FreePercent || 'N/A'}%)</p>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill ${getProgressClass(100 - (volume.FreePercent || 0))}" 
+                                             style="width: ${100 - (volume.FreePercent || 0)}%"></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        ` : '<p>Nenhum volume encontrado.</p>'}
+                        
+                        ${machine.Storage.Disks && machine.Storage.Disks.length > 0 ? `
+                            <h5>Discos:</h5>
+                            ${machine.Storage.Disks.map(disk => `
+                                <div style="margin-left: 20px; margin-bottom: 15px;">
+                                    <p><strong>Modelo:</strong> ${disk.Model || 'N/A'}</p>
+                                    <p><strong>Tipo:</strong> ${disk.Type || disk.Media || 'N/A'}</p>
+                                    <p><strong>Tamanho:</strong> ${disk.SizeGB || 'N/A'} GB</p>
+                                    <p><strong>Barramento:</strong> ${disk.Bus || 'N/A'}</p>
+                                    <p><strong>Estado:</strong> ${disk.Health || disk.OpStatus || 'N/A'}</p>
+                                </div>
+                            `).join('')}
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Informações de Rede
+            if (machine.Network) {
+                detailsHTML += `
+                    <div class="detail-section">
+                        <h4><i class="fas fa-network-wired"></i> Rede</h4>
+                        ${machine.Network.IPv4 && machine.Network.IPv4.length > 0 ? `
+                            <p><strong>Endereços IPv4:</strong> ${machine.Network.IPv4.join(', ') || 'N/A'}</p>
+                        ` : ''}
+                        ${machine.Network.MACs && machine.Network.MACs.length > 0 ? `
+                            <p><strong>Endereços MAC:</strong> ${machine.Network.MACs.join(', ') || 'N/A'}</p>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Informações de Temperatura
+            if (machine.Temps) {
+                detailsHTML += `
+                    <div class="detail-section">
+                        <h4><i class="fas fa-thermometer-half"></i> Temperaturas</h4>
+                        <p><strong>Máxima (ACPI):</strong> ${machine.Temps.ACPI_MaxC || 'N/A'}°C</p>
+                        <p><strong>Máxima (Disco):</strong> ${machine.Temps.Disk_MaxC || 'N/A'}°C</p>
+                        <p><strong>Máxima Registrada:</strong> ${machine.Temps.MaxC || 'N/A'}°C</p>
+                    </div>
+                `;
+            }
+
+            // Problemas reportados
+            if (machine.IssuesCrit && machine.IssuesCrit.length > 0) {
+                detailsHTML += `
+                    <div class="detail-section">
+                        <h4><i class="fas fa-exclamation-circle" style="color: var(--danger);"></i> Problemas Críticos</h4>
+                        <ul>
+                            ${machine.IssuesCrit.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (machine.IssuesWarn && machine.IssuesWarn.length > 0) {
+                detailsHTML += `
+                    <div class="detail-section">
+                        <h4><i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Alertas</h4>
+                        <ul>
+                            ${machine.IssuesWarn.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            return detailsHTML;
+        }
+
+        // Função para atualizar as estatísticas
+        function updateStats() {
+            const total = allMachines.length;
+            const ok = allMachines.filter(m => m.Status === 'OK').length;
+            const warning = allMachines.filter(m => m.Status === 'Atenção').length;
+            const critical = allMachines.filter(m => m.Status === 'Crítico').length;
+
+            document.getElementById('total-machines').textContent = total;
+            document.getElementById('ok-machines').textContent = ok;
+            document.getElementById('warning-machines').textContent = warning;
+            document.getElementById('critical-machines').textContent = critical;
+            document.getElementById('machine-count').textContent = `${total} máquinas`;
+        }
+
+        // Função para filtrar máquinas
+        function filterMachines() {
+            const searchText = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+            const sortBy = document.getElementById('sort-by').value;
+
+            let filtered = allMachines.filter(machine => {
+                const matchesSearch = machine.Hostname.toLowerCase().includes(searchText) ||
+                    (machine.OS?.Caption || '').toLowerCase().includes(searchText);
+
+                const matchesStatus = statusFilter === 'all' || machine.Status === statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Ordenar resultados
+            filtered.sort((a, b) => {
+                if (sortBy === 'hostname') {
+                    return a.Hostname.localeCompare(b.Hostname);
+                } else if (sortBy === 'status') {
+                    return a.Status.localeCompare(b.Status);
+                } else if (sortBy === 'timestamp') {
+                    return new Date(b.TimestampUtc) - new Date(a.TimestampUtc);
+                }
+                return 0;
+            });
+
+            renderMachines(filtered);
+        }
+
+        // Função auxiliar para formatar datas
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('pt-BR');
+            } catch (e) {
+                return 'N/A';
+            }
+        }
+
+        function formatDateMS(dateString){
+            const raw = dateString;
+
+            // Extrai apenas os dígitos (timestamp em ms)
+            const timestamp = parseInt(raw.match(/\d+/)[0], 10);
+
+            // Cria o objeto Date
+            const date = new Date(timestamp);
+
+            // Formata para uma string legível
+            const dateFormatted = date.toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
+
+            return dateFormatted;
+        }
+
+        // Funções para estados da UI
+        function showLoading() {
+            document.getElementById('machines-container').innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Carregando dados das máquinas...</p>
+                </div>
+            `;
+        }
+
+        function showError(error) {
+            document.getElementById('machines-container').innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Erro ao carregar dados das máquinas.</p>
+                    <p>Verifique se o script PowerShell foi executado e os arquivos JSON foram gerados.</p>
+                    <p>Detalhes: ${error.message}</p>
+                </div>
+            `;
+        }
+
+        function showEmptyState() {
+            document.getElementById('machines-container').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-server"></i>
+                    <h3>Nenhuma máquina encontrada</h3>
+                    <p>Execute o script PowerShell para gerar os dados de inventário.</p>
+                </div>
+            `;
+        }
+
+        // Alternar tema claro/escuro
+        function toggleTheme() {
+            if (document.body.classList.contains('dark-theme')) {
+                document.body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Inicializar eventos
+        function initEvents() {
+            // Botão de tema
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+            // Botão de atualizar
+            document.getElementById('refresh-btn').addEventListener('click', loadMachinesData);
+
+            // Filtros
+            document.getElementById('search-input').addEventListener('input', filterMachines);
+            document.getElementById('status-filter').addEventListener('change', filterMachines);
+            document.getElementById('sort-by').addEventListener('change', filterMachines);
+
+            // Fechar modal
+            document.querySelector('.close-modal').addEventListener('click', () => {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            });
+
+            // Fechar modal clicando fora dele
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        }
+
+        // Inicializar a aplicação
+        document.addEventListener('DOMContentLoaded', () => {
+            initEvents();
+            loadMachinesData();
+        });
+    </script>
+</body>
+
+</html>
