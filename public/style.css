@@ -627,6 +627,7 @@ header {
   cursor: pointer;
   border-bottom: 3px solid transparent;
   transition: var(--transition);
+  color: var(--text-primary);
 }
 
 .tab-btn.active {
@@ -645,6 +646,10 @@ header {
 
 .table-responsive {
   overflow-x: auto;
+}
+
+.table {
+  color: var(--text-primary);
 }
 
 .action-buttons {
