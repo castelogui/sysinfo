@@ -26,12 +26,23 @@ async function loadMachinesData() {
     // Carregar manifesto
     let manifest = [];
     try {
-      const manifestResponse = await fetch('./manifest.json');
-      if (!manifestResponse.ok) {
-        throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+      try {
+        const manifestResponse = await fetch('./manifest.json');
+        if (!manifestResponse.ok) {
+          throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+        }
+  
+        manifest = await manifestResponse.json();
+      } catch (error) {
+        console.error('Erro ao carregar manifesto oficial:', error);
+        console.log('Carregando manifesto alternativo...');
+        const manifestResponse = await fetch('./manifest_exemple.json');
+        if (!manifestResponse.ok) {
+          throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+        }
+  
+        manifest = await manifestResponse.json();
       }
-
-      manifest = await manifestResponse.json();
     } catch (error) {
       console.error('Erro ao carregar manifesto:', error);
       showError('machines-container', 'Erro ao carregar manifesto. Execute o script PowerShell primeiro.');

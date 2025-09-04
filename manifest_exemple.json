@@ -1,0 +1,40 @@
+﻿[
+    {
+        "Hostname":  "ATC-BALCAO-CX04",
+        "Json":  "machines_exemple/ATC-BALCAO-CX04.json",
+        "TimestampUtc":  "2025-09-04T12:09:21.2006178Z",
+        "Status":  "Crítico",
+        "OS":  "Microsoft Windows 10 Pro",
+        "CollectionMode":  "Completo"
+    },
+    {
+        "Hostname":  "ATC-BALCAO-CX06",
+        "Json":  "machines_exemple/ATC-BALCAO-CX04.json",
+        "TimestampUtc":  "2025-09-04T11:42:40.6104156Z",
+        "Status":  "Crítico",
+        "OS":  "Microsoft Windows 10 Pro"
+    },
+    {
+        "Hostname":  "ATC-BALCAO",
+        "Json":  "machines_exemple/ATC-BALCAO.json",
+        "TimestampUtc":  "2025-09-04T11:59:02.3721037Z",
+        "Status":  "Crítico",
+        "OS":  "Microsoft Windows 10 Pro"
+    },
+    {
+        "Hostname":  "AUXI-GERENCIA",
+        "Json":  "machines_exemple/AUXI-GERENCIA.json",
+        "TimestampUtc":  "2025-09-04T13:04:10.9448193Z",
+        "Status":  "Crítico",
+        "OS":  "Microsoft Windows 10 Pro",
+        "CollectionMode":  "Completo"
+    },
+    {
+        "Hostname":  "SPA-ARQUIVOS",
+        "Json":  "machines_exemple/SPA-ARQUIVOS.json",
+        "TimestampUtc":  "2025-09-04T12:28:28.5348629Z",
+        "Status":  "Crítico",
+        "OS":  "Microsoft Windows 10 Pro",
+        "CollectionMode":  "Completo"
+    }
+]

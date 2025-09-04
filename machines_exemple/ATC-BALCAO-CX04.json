@@ -1,0 +1,108 @@
+﻿{
+    "Hostname":  "ATC-BALCAO-CX04",
+    "TimestampUtc":  "2025-09-04T11:49:55.9054683Z",
+    "Status":  "Crítico",
+    "IssuesWarn":  [
+
+                   ],
+    "IssuesCrit":  [
+
+                   ],
+    "OS":  {
+               "Caption":  "Microsoft Windows 10 Pro",
+               "Version":  "10.0.19045",
+               "Build":  "19045",
+               "Architecture":  "64 bits",
+               "InstallDate":  "\/Date(1653727484000)\/",
+               "LastBoot":  "\/Date(1756986519500)\/",
+               "Uptime":  "0d 0h 1m"
+           },
+    "Computer":  {
+                     "Manufacturer":  "Micro-Star International Co., Ltd.",
+                     "Model":  "MS-7D22",
+                     "Family":  "Default string",
+                     "Domain":  "brasildis.lan",
+                     "Serial":  "Default string"
+                 },
+    "BIOS":  {
+                 "Vendor":  "American Megatrends International, LLC.",
+                 "Version":  "3.50",
+                 "ReleaseDate":  "\/Date(1631232000000)\/"
+             },
+    "BaseBoard":  {
+                      "Manufacturer":  "Micro-Star International Co., Ltd.",
+                      "Product":  "H510M-A PRO (MS-7D22)",
+                      "Serial":  "07D2212_L91E164134"
+                  },
+    "CPU":  {
+                "Name":  "Intel(R) Core(TM) i3-10105 CPU @ 3.70GHz",
+                "Cores":  4,
+                "Logical":  8,
+                "MaxClockMHz":  3696,
+                "ProcessorId":  "BFEBFBFF000A0653"
+            },
+    "GPU":  {
+                "Name":  "Intel(R) UHD Graphics 630",
+                "DriverVersion":  "31.0.101.2111",
+                "DriverDate":  "\/Date(1658188800000)\/",
+                "VRAM_GB":  1
+            },
+    "RAM":  {
+                "TotalGB":  7.83,
+                "FreeGB":  4.59,
+                "FreePercent":  58.6,
+                "Modules":  [
+                                {
+                                    "Bank":  "BANK 1",
+                                    "Slot":  "Controller0-ChannelB",
+                                    "Manuf":  "0x0000",
+                                    "Part":  "                    ",
+                                    "Serial":  "00000000",
+                                    "CapacityGB":  8,
+                                    "SpeedMHz":  2400,
+                                    "ConfClk":  2400,
+                                    "Form":  8,
+                                    "SMBIOSType":  26
+                                }
+                            ]
+            },
+    "Storage":  {
+                    "Volumes":  [
+                                    {
+                                        "DriveLetter":  "C",
+                                        "Label":  "",
+                                        "FileSystem":  "NTFS",
+                                        "SizeGB":  222.39,
+                                        "FreeGB":  129.78,
+                                        "FreePercent":  58.4,
+                                        "Health":  null
+                                    }
+                                ],
+                    "Disks":  [
+                                  {
+                                      "Model":  "PNY CS900 240GB SSD",
+                                      "Serial":  "PNY22012201070100840",
+                                      "Media":  "SSD",
+                                      "Bus":  "SATA",
+                                      "Type":  "SSD",
+                                      "SizeGB":  223.57,
+                                      "Health":  "Healthy",
+                                      "OpStatus":  "OK",
+                                      "Spindle":  0
+                                  }
+                              ]
+                },
+    "Network":  {
+                    "IPv4":  [
+                                 "192.168.0.35"
+                             ],
+                    "MACs":  [
+                                 "D6:E7:CS:98:36:OF"
+                             ]
+                },
+    "Temps":  {
+                  "ACPI_MaxC":  null,
+                  "Disk_MaxC":  null,
+                  "MaxC":  null
+              }
+}
