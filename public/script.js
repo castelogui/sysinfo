@@ -1,4 +1,5 @@
 // Variáveis globais
+let ambienteProducao = true; // Alterar para false em ambiente de teste
 let allMachines = [];
 let allAlerts = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
@@ -26,22 +27,29 @@ async function loadMachinesData() {
     // Carregar manifesto
     let manifest = [];
     try {
-      try {
-        const manifestResponse = await fetch('./manifest.json');
-        if (!manifestResponse.ok) {
-          throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+      if (ambienteProducao) {
+        try {
+          const manifestResponse = await fetch('./manifest.json');
+          if (!manifestResponse.ok) {
+            throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+          }
+
+          manifest = await manifestResponse.json();
+        } catch (error) {
+          console.error('Erro ao carregar manifesto oficial:', error);
         }
-  
-        manifest = await manifestResponse.json();
-      } catch (error) {
-        console.error('Erro ao carregar manifesto oficial:', error);
-        console.log('Carregando manifesto alternativo...');
-        const manifestResponse = await fetch('./manifest_exemple.json');
-        if (!manifestResponse.ok) {
-          throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+      } else {
+        try {
+          console.log('Carregando manifesto alternativo...');
+          const manifestResponse = await fetch('./manifest_exemple.json');
+          if (!manifestResponse.ok) {
+            throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
+          }
+
+          manifest = await manifestResponse.json();
+        } catch (error) {
+          console.error('Erro ao carregar manifesto alternativo:', error);
         }
-  
-        manifest = await manifestResponse.json();
       }
     } catch (error) {
       console.error('Erro ao carregar manifesto:', error);
@@ -292,7 +300,7 @@ function createDetailsContent(machine) {
           <div class="tab-content active" id="tab-overview">
       `;
   console.log(machine.Computer);
-  
+
   // Visão Geral
   detailsHTML += `
         <div class="detail-grid">
