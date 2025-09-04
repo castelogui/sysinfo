@@ -946,9 +946,10 @@ function Get-SystemInventory {
     try { $ipv4s = @($netCfg | ForEach-Object { $_.IPv4Address.IPAddress } | Where-Object { $_ } | Select-Object -Unique) } catch {}
     try { $macs = @((Get-CimInstance Win32_NetworkAdapter -Filter "PhysicalAdapter=True" | Where-Object { $_.NetEnabled -eq $true }).MACAddress | Where-Object { $_ } | Select-Object -Unique) } catch {}
     
-    # Uptime/CPU
+    # Uptime/CPU/GPU
     $boot = $os.LastBootUpTime; $uptime = Get-UptimeString $boot
     $cpuMain = $cpu | Select-Object -First 1
+    $gpuMain = $gpu | Select-Object -First 1
     
     # Temperaturas
     $acpiMaxC = $null; $diskMaxC = $null
@@ -1052,20 +1053,7 @@ function Get-SystemInventory {
     }
     
     $Status = if ($crits.Count -gt 0) { "Crítico" } elseif ($warns.Count -gt 0) { "Atenção" } else { "OK" }
-    
-    # GPU
-    $gpuArr = @()
-    if ($gpu) {
-        $gpuArr = @($gpu | ForEach-Object {
-                [pscustomobject]@{
-                    Name       = $_.Name
-                    DriverVer  = $_.DriverVersion
-                    DriverDate = $_.DriverDate
-                    VRAM_GB    = if ($_.AdapterRAM) { [math]::Round($_.AdapterRAM / 1GB, 2) } else { $null }
-                }
-            })
-    }
-    
+        
     # Montagem do objeto de relatório
     $report = [pscustomobject]@{
         Hostname       = $computer
@@ -1087,6 +1075,8 @@ function Get-SystemInventory {
         Computer       = [pscustomobject]@{
             Manufacturer = $cs.Manufacturer
             Model        = $cs.Model
+            Family       = $cs.SystemFamily
+            Domain       = $cs.Domain
             Serial       = $bios.SerialNumber
         }
         BIOS           = [pscustomobject]@{
@@ -1106,7 +1096,12 @@ function Get-SystemInventory {
             MaxClockMHz = $cpuMain.MaxClockSpeed
             ProcessorId = $cpuMain.ProcessorId
         }
-        GPU            = @($gpuArr)
+        GPU            = [pscustomobject]@{
+            Name          = if ($gpuMain) { $gpuMain.Name } else { $null }
+            DriverVersion = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
+            DriverDate    = if ($gpuMain) { $gpuMain.DriverDate } else { $null }
+            VRAM_GB       = if ($gpuMain -and $gpuMain.AdapterRAM) { [math]::Round($gpuMain.AdapterRAM / 1GB, 2) } else { $null } 
+        }
         RAM            = [pscustomobject]@{
             TotalGB     = $totalRAM
             FreeGB      = $freeRAM
