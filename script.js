@@ -21,11 +21,6 @@ async function fetchConfig() {
   }
 }
 
-fetchConfig().then((config) => {
-  ambienteProducao = config.AMBIENTE_PRODUCAO;
-});
-
-
 // Aplicar tema salvo
 if (currentTheme === 'dark') {
   document.body.classList.add('dark-theme');
@@ -47,7 +42,7 @@ async function loadMachinesData() {
     try {
       if (ambienteProducao) {
         try {
-          const manifestResponse = await fetch('../manifest.json');
+          const manifestResponse = await fetch('manifest.json');
           if (!manifestResponse.ok) {
             throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
           }
@@ -1242,6 +1237,9 @@ function exportCSV() {
 
 // Inicializar a aplicação
 document.addEventListener('DOMContentLoaded', () => {
-  initEvents();
-  loadMachinesData();
+  fetchConfig().then((config) => {
+    ambienteProducao = config.AMBIENTE_PRODUCAO;
+    initEvents();
+    loadMachinesData();
+  });
 });
