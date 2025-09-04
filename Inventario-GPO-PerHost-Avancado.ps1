@@ -314,7 +314,7 @@ function Initialize-CSVStorage {
     param([string]$DbPath)
     
     try {
-        $csvDir = "$PSScriptRoot\csv_data"
+        $csvDir = "$RepoRoot\csv_data"
         New-Item -ItemType Directory -Path $csvDir -Force | Out-Null
         
         # Criar arquivo CSV de metadados
@@ -340,8 +340,8 @@ function Initialize-SQLiteRaw {
         $dllPaths = @(
             ".\libs\System.Data.SQLite.dll",
             ".\System.Data.SQLite.dll",
-            "$PSScriptRoot\libs\System.Data.SQLite.dll",
-            "$PSScriptRoot\System.Data.SQLite.dll"
+            "$RepoRoot\libs\System.Data.SQLite.dll",
+            "$RepoRoot\System.Data.SQLite.dll"
         )
         
         foreach ($dllPath in $dllPaths) {
@@ -523,7 +523,7 @@ function Save-ToSQLiteRaw {
         $dllPaths = @(
             ".\libs\System.Data.SQLite.dll",
             ".\System.Data.SQLite.dll",
-            "$PSScriptRoot\libs\System.Data.SQLite.dll"
+            "$RepoRoot\libs\System.Data.SQLite.dll"
         )
         
         foreach ($dllPath in $dllPaths) {
@@ -576,7 +576,7 @@ function Save-ToCSV {
     )
     
     try {
-        $csvDir = "$PSScriptRoot\csv_data"
+        $csvDir = "$RepoRoot\csv_data"
         $csvFile = "$csvDir\database_info.csv"
         $jsonFile = "$csvDir\$Hostname-$(Get-Date $Timestamp -Format 'yyyyMMdd_HHmmss').json"
         
@@ -607,7 +607,7 @@ function Save-Alert {
     
     try {
         # Para simplificar, vamos salvar alertas em arquivo CSV também
-        $alertDir = "$PSScriptRoot\alerts"
+        $alertDir = "$RepoRoot\alerts"
         $alertFile = "$alertDir\alerts.csv"
         
         New-Dir $alertDir
