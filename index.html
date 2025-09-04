@@ -968,9 +968,13 @@
             }
             
             const machineData = await machineResponse.json();
-            machineData.forEach(m => {
-              if(m) allMachines.push(m)
-            });
+            if(Array.isArray(machineData)) {
+              machineData.forEach(m => {
+                if(m?.Hostname) allMachines.push(m)
+              });
+            }else{
+              allMachines.push(machineData);
+            }
           } catch (error) {
             console.error(`Erro ao processar máquina ${entry.Hostname}:`, error);
           }
