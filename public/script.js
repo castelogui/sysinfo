@@ -299,7 +299,6 @@ function createDetailsContent(machine) {
           
           <div class="tab-content active" id="tab-overview">
       `;
-  console.log(machine.Computer);
 
   // Visão Geral
   detailsHTML += `
