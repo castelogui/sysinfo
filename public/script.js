@@ -1,5 +1,5 @@
 // Variáveis globais
-let ambienteProducao = true; // Alterar para false em ambiente de teste
+let ambienteProducao = false; // Alterar para false em ambiente de teste
 let allMachines = [];
 let allAlerts = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
