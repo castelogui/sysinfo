@@ -1078,6 +1078,7 @@ function Get-SystemInventory {
             Family       = $cs.SystemFamily
             Domain       = $cs.Domain
             Serial       = $bios.SerialNumber
+            User         = $cs.UserName
         }
         BIOS           = [pscustomobject]@{
             Vendor      = $bios.Manufacturer
