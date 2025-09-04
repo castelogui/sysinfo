@@ -1,40 +1,42 @@
-﻿[
+[
     {
-        "Hostname":  "ATC-BALCAO-CX04",
-        "Json":  "machines_exemple/ATC-BALCAO-CX04.json",
-        "TimestampUtc":  "2025-09-04T12:09:21.2006178Z",
-        "Status":  "Crítico",
-        "OS":  "Microsoft Windows 10 Pro",
-        "CollectionMode":  "Completo"
+        "Hostname": "PC-01",
+        "Json": "machines_exemple/PC-01.json",
+        "TimestampUtc": "2025-09-04T14:46:43.402280Z",
+        "Status": "OK",
+        "OS": "Microsoft Windows 10 Pro",
+        "CollectionMode": "Completo"
     },
     {
-        "Hostname":  "ATC-BALCAO-CX06",
-        "Json":  "machines_exemple/ATC-BALCAO-CX04.json",
-        "TimestampUtc":  "2025-09-04T11:42:40.6104156Z",
-        "Status":  "Crítico",
-        "OS":  "Microsoft Windows 10 Pro"
+        "Hostname": "PC-02",
+        "Json": "machines_exemple/PC-02.json",
+        "TimestampUtc": "2025-09-04T14:46:43.403140Z",
+        "Status": "OK",
+        "OS": "Microsoft Windows 10 Pro",
+        "CollectionMode": "Completo"
     },
     {
-        "Hostname":  "ATC-BALCAO",
-        "Json":  "machines_exemple/ATC-BALCAO.json",
-        "TimestampUtc":  "2025-09-04T11:59:02.3721037Z",
-        "Status":  "Crítico",
-        "OS":  "Microsoft Windows 10 Pro"
+        "Hostname": "PC-03",
+        "Json": "machines_exemple/PC-03.json",
+        "TimestampUtc": "2025-09-04T14:46:43.404030Z",
+        "Status": "OK",
+        "OS": "Microsoft Windows 10 Pro",
+        "CollectionMode": "Completo"
     },
     {
-        "Hostname":  "AUXI-GERENCIA",
-        "Json":  "machines_exemple/AUXI-GERENCIA.json",
-        "TimestampUtc":  "2025-09-04T13:04:10.9448193Z",
-        "Status":  "Crítico",
-        "OS":  "Microsoft Windows 10 Pro",
-        "CollectionMode":  "Completo"
+        "Hostname": "PC-04",
+        "Json": "machines_exemple/PC-04.json",
+        "TimestampUtc": "2025-09-04T14:46:43.404783Z",
+        "Status": "OK",
+        "OS": "Microsoft Windows 10 Pro",
+        "CollectionMode": "Completo"
     },
     {
-        "Hostname":  "SPA-ARQUIVOS",
-        "Json":  "machines_exemple/SPA-ARQUIVOS.json",
-        "TimestampUtc":  "2025-09-04T12:28:28.5348629Z",
-        "Status":  "Crítico",
-        "OS":  "Microsoft Windows 10 Pro",
-        "CollectionMode":  "Completo"
+        "Hostname": "PC-05",
+        "Json": "machines_exemple/PC-05.json",
+        "TimestampUtc": "2025-09-04T14:46:43.406206Z",
+        "Status": "OK",
+        "OS": "Microsoft Windows Server 2016 Standard",
+        "CollectionMode": "Completo"
     }
 ]

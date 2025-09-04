@@ -1,0 +1,117 @@
+{
+    "Hostname": "PC-01",
+    "TimestampUtc": "2025-09-04T14:46:43.403485Z",
+    "Status": "OK",
+    "IssuesWarn": [],
+    "IssuesCrit": [],
+    "OS": {
+        "Caption": "Microsoft Windows 10 Pro",
+        "Version": "10.0.22631",
+        "Build": "22631",
+        "Architecture": "64 bits",
+        "InstallDate": "/Date(1706453203403)/",
+        "LastBoot": "/Date(1756892803403)/",
+        "Uptime": "1d 5h 45m"
+    },
+    "Computer": {
+        "Manufacturer": "ACME Systems",
+        "Model": "VX-859",
+        "Family": "X-Series",
+        "Domain": "contoso.local",
+        "Serial": "41Z1KPJ725",
+        "User": "CONTOSO\\user01"
+    },
+    "BIOS": {
+        "Vendor": "ACME",
+        "Version": "AC19.7",
+        "ReleaseDate": "/Date(1592837203403)/"
+    },
+    "BaseBoard": {
+        "Manufacturer": "ACME",
+        "Product": "AX570",
+        "Serial": "IZQP8N84XF5ACEYN"
+    },
+    "CPU": {
+        "Name": "AMD Ryzen 5 7600",
+        "Cores": 6,
+        "Logical": 12,
+        "MaxClockMHz": 3800,
+        "ProcessorId": "8964E1F6EB362379"
+    },
+    "GPU": {
+        "Name": "AMD Radeon RX 7800 XT",
+        "DriverVersion": "31.0.15.5212",
+        "DriverDate": "/Date(1727016403403)/",
+        "VRAM_GB": 16
+    },
+    "RAM": {
+        "TotalGB": 24.0,
+        "FreeGB": 11.14,
+        "FreePercent": 46.4,
+        "Modules": [
+            {
+                "Bank": "BANK 0",
+                "Slot": "ChannelA-DIMM0",
+                "Manuf": "ACME",
+                "Part": "AC3200D08",
+                "Serial": "KEOH2S0J",
+                "CapacityGB": 8,
+                "SpeedMHz": 3200,
+                "ConfClk": 3200,
+                "Form": 8,
+                "SMBIOSType": 26
+            },
+            {
+                "Bank": "BANK 1",
+                "Slot": "ChannelB-DIMM1",
+                "Manuf": "ACME",
+                "Part": "AC3200D16",
+                "Serial": "6HJ73NZA",
+                "CapacityGB": 16,
+                "SpeedMHz": 3200,
+                "ConfClk": 3200,
+                "Form": 8,
+                "SMBIOSType": 26
+            }
+        ]
+    },
+    "Storage": {
+        "Volumes": [
+            {
+                "DriveLetter": "C",
+                "Label": "",
+                "FileSystem": "NTFS",
+                "SizeGB": 931.39,
+                "FreeGB": 511.23,
+                "FreePercent": 54.9,
+                "Health": null
+            }
+        ],
+        "Disks": [
+            {
+                "Model": "ACME NVMe X1000",
+                "Serial": "QD5XY0YD33YJOXWRJZHEEP98",
+                "Media": "SSD",
+                "Bus": "NVMe",
+                "Type": "NVMe",
+                "SizeGB": 931.39,
+                "Health": "Healthy",
+                "OpStatus": "OK",
+                "Spindle": 0
+            }
+        ]
+    },
+    "Network": {
+        "IPv4": [
+            "10.253.141.6"
+        ],
+        "MACs": [
+            "39:6E:4D:8A:B9:FC"
+        ]
+    },
+    "Temps": {
+        "ACPI_MaxC": 50.2,
+        "Disk_MaxC": 61.5,
+        "MaxC": 61.5
+    }
+}

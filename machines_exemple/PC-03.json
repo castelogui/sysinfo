@@ -1,0 +1,117 @@
+{
+    "Hostname": "PC-03",
+    "TimestampUtc": "2025-09-04T14:46:43.401663Z",
+    "Status": "OK",
+    "IssuesWarn": [],
+    "IssuesCrit": [],
+    "OS": {
+        "Caption": "Microsoft Windows 10 Pro",
+        "Version": "10.0.22631",
+        "Build": "22631",
+        "Architecture": "64 bits",
+        "InstallDate": "/Date(1640443603401)/",
+        "LastBoot": "/Date(1756680403401)/",
+        "Uptime": "3d 16h 54m"
+    },
+    "Computer": {
+        "Manufacturer": "ACME Systems",
+        "Model": "VX-533",
+        "Family": "X-Series",
+        "Domain": "contoso.local",
+        "Serial": "A9N9IK5PFO",
+        "User": "CONTOSO\\user03"
+    },
+    "BIOS": {
+        "Vendor": "ACME",
+        "Version": "AC67.6",
+        "ReleaseDate": "/Date(1645800403401)/"
+    },
+    "BaseBoard": {
+        "Manufacturer": "ACME",
+        "Product": "AX570",
+        "Serial": "Y661YLRVDJMFAL11"
+    },
+    "CPU": {
+        "Name": "AMD Ryzen 7 5800X3D",
+        "Cores": 8,
+        "Logical": 16,
+        "MaxClockMHz": 3800,
+        "ProcessorId": "E050CD8EE7AE115A"
+    },
+    "GPU": {
+        "Name": "NVIDIA GeForce RTX 4070 Ti",
+        "DriverVersion": "31.0.15.5212",
+        "DriverDate": "/Date(1733755603401)/",
+        "VRAM_GB": 12
+    },
+    "RAM": {
+        "TotalGB": 32.0,
+        "FreeGB": 13.17,
+        "FreePercent": 41.2,
+        "Modules": [
+            {
+                "Bank": "BANK 0",
+                "Slot": "ChannelA-DIMM0",
+                "Manuf": "ACME",
+                "Part": "AC3600D16",
+                "Serial": "1HJNSBSF",
+                "CapacityGB": 16,
+                "SpeedMHz": 3600,
+                "ConfClk": 3600,
+                "Form": 8,
+                "SMBIOSType": 26
+            },
+            {
+                "Bank": "BANK 1",
+                "Slot": "ChannelB-DIMM1",
+                "Manuf": "ACME",
+                "Part": "AC3600D16",
+                "Serial": "RALDU26I",
+                "CapacityGB": 16,
+                "SpeedMHz": 3600,
+                "ConfClk": 3600,
+                "Form": 8,
+                "SMBIOSType": 26
+            }
+        ]
+    },
+    "Storage": {
+        "Volumes": [
+            {
+                "DriveLetter": "C",
+                "Label": "",
+                "FileSystem": "NTFS",
+                "SizeGB": 931.39,
+                "FreeGB": 658.78,
+                "FreePercent": 70.7,
+                "Health": null
+            }
+        ],
+        "Disks": [
+            {
+                "Model": "ACME NVMe X1000",
+                "Serial": "Q53KM4FBDB9Q7YBYN80IVDBS",
+                "Media": "SSD",
+                "Bus": "NVMe",
+                "Type": "NVMe",
+                "SizeGB": 931.39,
+                "Health": "Healthy",
+                "OpStatus": "OK",
+                "Spindle": 0
+            }
+        ]
+    },
+    "Network": {
+        "IPv4": [
+            "10.1.13.1"
+        ],
+        "MACs": [
+            "E1:26:3F:36:69:CF"
+        ]
+    },
+    "Temps": {
+        "ACPI_MaxC": 31.6,
+        "Disk_MaxC": 61.6,
+        "MaxC": 61.6
+    }
+}

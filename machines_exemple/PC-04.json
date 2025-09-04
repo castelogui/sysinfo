@@ -1,0 +1,119 @@
+{
+    "Hostname": "PC-04",
+    "TimestampUtc": "2025-09-04T14:46:43.404284Z",
+    "Status": "OK",
+    "IssuesWarn": [
+        "Memória RAM com pouco espaço livre"
+    ],
+    "IssuesCrit": [],
+    "OS": {
+        "Caption": "Microsoft Windows 10 Pro",
+        "Version": "10.0.22631",
+        "Build": "22631",
+        "Architecture": "64 bits",
+        "InstallDate": "/Date(1678805203404)/",
+        "LastBoot": "/Date(1756345603404)/",
+        "Uptime": "7d 13h 44m"
+    },
+    "Computer": {
+        "Manufacturer": "ACME Systems",
+        "Model": "VX-539",
+        "Family": "V530S-07ICB",
+        "Domain": "contoso.local",
+        "Serial": "H5VO9QV4KM",
+        "User": "CONTOSO\\user04"
+    },
+    "BIOS": {
+        "Vendor": "ACME",
+        "Version": "AC12.4",
+        "ReleaseDate": "/Date(1717944403404)/"
+    },
+    "BaseBoard": {
+        "Manufacturer": "ACME",
+        "Product": "AX570",
+        "Serial": "5PJ3CEU8ZWGLMQBC"
+    },
+    "CPU": {
+        "Name": "Intel(R) Core(TM) i5-13600K",
+        "Cores": 14,
+        "Logical": 20,
+        "MaxClockMHz": 3900,
+        "ProcessorId": "DE90898DCA716698"
+    },
+    "GPU": {
+        "Name": "NVIDIA GeForce RTX 4080",
+        "DriverVersion": "31.0.15.5212",
+        "DriverDate": "/Date(1738334803404)/",
+        "VRAM_GB": 16
+    },
+    "RAM": {
+        "TotalGB": 32.0,
+        "FreeGB": 21.25,
+        "FreePercent": 66.4,
+        "Modules": [
+            {
+                "Bank": "BANK 0",
+                "Slot": "ChannelA-DIMM0",
+                "Manuf": "ACME",
+                "Part": "AC3600D16",
+                "Serial": "76Z4C1Y4",
+                "CapacityGB": 16,
+                "SpeedMHz": 3600,
+                "ConfClk": 3600,
+                "Form": 8,
+                "SMBIOSType": 26
+            },
+            {
+                "Bank": "BANK 1",
+                "Slot": "ChannelB-DIMM1",
+                "Manuf": "ACME",
+                "Part": "AC3600D16",
+                "Serial": "CP76X0RC",
+                "CapacityGB": 16,
+                "SpeedMHz": 3600,
+                "ConfClk": 3600,
+                "Form": 8,
+                "SMBIOSType": 26
+            }
+        ]
+    },
+    "Storage": {
+        "Volumes": [
+            {
+                "DriveLetter": "C",
+                "Label": "",
+                "FileSystem": "NTFS",
+                "SizeGB": 931.39,
+                "FreeGB": 506.41,
+                "FreePercent": 54.4,
+                "Health": null
+            }
+        ],
+        "Disks": [
+            {
+                "Model": "ACME SSD S900",
+                "Serial": "P46O6RDBHNG9SB6UMC7RITBV",
+                "Media": "SSD",
+                "Bus": "SATA",
+                "Type": "SSD",
+                "SizeGB": 931.39,
+                "Health": "Healthy",
+                "OpStatus": "OK",
+                "Spindle": 0
+            }
+        ]
+    },
+    "Network": {
+        "IPv4": [
+            "10.238.166.150"
+        ],
+        "MACs": [
+            "91:12:1F:CC:BB:45"
+        ]
+    },
+    "Temps": {
+        "ACPI_MaxC": 69.7,
+        "Disk_MaxC": 41.0,
+        "MaxC": 69.7
+    }
+}

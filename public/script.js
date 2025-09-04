@@ -291,7 +291,8 @@ function createDetailsContent(machine) {
           
           <div class="tab-content active" id="tab-overview">
       `;
-
+  console.log(machine.Computer);
+  
   // Visão Geral
   detailsHTML += `
         <div class="detail-grid">
@@ -322,6 +323,7 @@ function createDetailsContent(machine) {
           <p><strong>Instalado em:</strong> ${formatDateMS(machine.OS?.InstallDate) || 'N/A'}</p>
           <p><strong>Último boot:</strong> ${formatDateMS(machine.OS?.LastBoot) || 'N/A'}</p>
           <p><strong>Uptime:</strong> ${machine.OS?.Uptime || 'N/A'}</p>
+          <p><strong>Usuário Logado:</strong> ${machine.Computer?.User || 'N/A'}</p>
         </div>
       `;
 

@@ -1,0 +1,237 @@
+[
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    {
+        "Hostname": "PC-05",
+        "TimestampUtc": "2025-09-04T14:46:43.405448Z",
+        "Status": "OK",
+        "IssuesWarn":  [
+                           "Processos com alto uso de CPU"
+                       ],
+        "IssuesCrit": [],
+        "CollectionMode": "Completo",
+        "ScriptVersion": "2.2",
+        "OS": {
+            "Caption": "Microsoft Windows Server 2016 Standard",
+            "Version": "10.0.22631",
+            "Build": "22631",
+            "Architecture": "64 bits",
+            "InstallDate": "/Date(1646405203405)/",
+            "LastBoot": "/Date(1756900003405)/",
+            "Uptime": "1d 3h 45m",
+            "User": "DOMINIO\\usuario_logado"
+        },
+        "Computer": {
+            "Manufacturer": "ACME Systems",
+            "Model": "VX-572",
+            "Serial": "D59PU6ICP1",
+            "Family": "X-Series",
+            "Domain": "contoso.local",
+            "User": "CONTOSO\\user05"
+        },
+        "BIOS": {
+            "Vendor": "ACME",
+            "Version": "AC89.3",
+            "ReleaseDate": "/Date(1605797203405)/"
+        },
+        "BaseBoard": {
+            "Manufacturer": "ACME",
+            "Product": "AX570",
+            "Serial": "BZ5LUYRPVIHGAR9I"
+        },
+        "CPU": {
+            "Name": "AMD Ryzen 7 7800X3D",
+            "Cores": 8,
+            "Logical": 16,
+            "MaxClockMHz": 4200,
+            "ProcessorId": "471576C64EA447FD"
+        },
+        "GPU":{
+                "Name": "AMD Radeon RX 7700 XT",
+                "DriverVer": "31.0.15.5212",
+                "DriverDate": "/Date(1739285203405)/",
+                "VRAM_GB": 12
+        },
+        "RAM": {
+            "TotalGB": 24.0,
+            "FreeGB": 14.54,
+            "FreePercent": 60.6,
+            "Modules": [
+                {
+                    "Bank": "BANK 0",
+                    "Slot": "ChannelA-DIMM0",
+                    "Manuf": "ACME",
+                    "Part": "AC3200D08",
+                    "Serial": "0E99PPFF",
+                    "CapacityGB": 8,
+                    "SpeedMHz": 3200,
+                    "ConfClk": 3200,
+                    "Form": 8,
+                    "SMBIOSType": 26
+                },
+                {
+                    "Bank": "BANK 1",
+                    "Slot": "ChannelB-DIMM1",
+                    "Manuf": "ACME",
+                    "Part": "AC3200D16",
+                    "Serial": "80ZW0C82",
+                    "CapacityGB": 16,
+                    "SpeedMHz": 3200,
+                    "ConfClk": 3200,
+                    "Form": 8,
+                    "SMBIOSType": 26
+                }
+            ]
+        },
+        "Storage": {
+            "Volumes": [
+                {
+                    "DriveLetter": "C",
+                    "Label": "",
+                    "FileSystem": "NTFS",
+                    "SizeGB": 1863.02,
+                    "FreeGB": 820.76,
+                    "FreePercent": 44.1,
+                    "Health": null
+                }
+            ],
+            "Disks": [
+                {
+                    "Model": "ACME NVMe X1000",
+                    "Serial": "6PEH5N1Z8ET2XSIMWA3GOI03",
+                    "Media": "SSD",
+                    "Bus": "NVMe",
+                    "Type": "NVMe",
+                    "SizeGB": 1863.02,
+                    "Health": "Healthy",
+                    "OpStatus": "OK",
+                    "Spindle": 0
+                }
+            ]
+        },
+        "Network": {
+            "IPv4": [
+                "10.98.83.100"
+            ],
+            "MACs": [
+                "94:0B:D9:B6:70:FB"
+            ]
+        },
+        "Temps": {
+            "ACPI_MaxC": 37.9,
+            "Disk_MaxC": 50.4,
+            "MaxC": 50.4
+        },
+        "Processes": [
+            {
+                "Name": "System",
+                "ID": 4,
+                "CPU": 0.89,
+                "MemoryMB": 45.0,
+                "Path": null,
+                "StartTime": "/Date(1756900003405)/"
+            },
+            {
+                "Name": "explorer",
+                "ID": 6250,
+                "CPU": 1.43,
+                "MemoryMB": 150.5,
+                "Path": "C:\\Windows\\Explorer.EXE",
+                "StartTime": "/Date(1756900303405)/"
+            },
+            {
+                "Name": "acmeagent",
+                "ID": 2079,
+                "CPU": 0.31,
+                "MemoryMB": 55.2,
+                "Path": "C:\\Program Files\\Acme\\Agent\\acmeagent.exe",
+                "StartTime": "/Date(1756900183405)/"
+            }
+        ],
+        "Services": [
+            {
+                "Name": "Dhcp",
+                "DisplayName": "Cliente DHCP",
+                "Status": 4,
+                "StartType": "Auto"
+            },
+            {
+                "Name": "EventLog",
+                "DisplayName": "Log de Eventos do Windows",
+                "Status": 4,
+                "StartType": "Auto"
+            },
+            {
+                "Name": "LanmanServer",
+                "DisplayName": "Server",
+                "Status": 4,
+                "StartType": "Auto"
+            }
+        ],
+        "Software": [
+            {
+                "Name": "Acme Utilities",
+                "Version": "3.2.1",
+                "Publisher": "ACME Corp",
+                "InstallDate": "20250904",
+                "SizeMB": 120.0
+            },
+            {
+                "Name": "Acme Backup Client",
+                "Version": "5.4.0",
+                "Publisher": "ACME Corp",
+                "InstallDate": "20250507",
+                "SizeMB": 250.0
+            },
+            {
+                "Name": "Microsoft Edge",
+                "Version": "139.0.3405.125",
+                "Publisher": "Microsoft Corporation",
+                "InstallDate": null,
+                "SizeMB": 175.0
+            }
+        ],
+        "EventLogs": [
+            {
+                "TimeCreated": "/Date(1756979203405)/",
+                "LogName": "System",
+                "Level": "Informação",
+                "Provider": "ACME-Monitor",
+                "Message": "Serviço iniciado com êxito.",
+                "EventID": 1000
+            }
+        ],
+        "Security": {
+            "Firewall": [
+                {
+                    "Profile": "Domain",
+                    "Enabled": 1,
+                    "DefaultIn": 2,
+                    "DefaultOut": 2
+                },
+                {
+                    "Profile": "Private",
+                    "Enabled": 1,
+                    "DefaultIn": 2,
+                    "DefaultOut": 2
+                },
+                {
+                    "Profile": "Public",
+                    "Enabled": 1,
+                    "DefaultIn": 2,
+                    "DefaultOut": 2
+                }
+            ],
+            "Antivirus": [
+                {
+                    "Name": "Acme Defender",
+                    "Version": "1.0"
+                }
+            ]
+        }
+    }
+]
