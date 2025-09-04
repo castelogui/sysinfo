@@ -1238,7 +1238,7 @@ function exportCSV() {
 // Inicializar a aplicação
 document.addEventListener('DOMContentLoaded', () => {
   fetchConfig().then((config) => {
-    ambienteProducao = config.AMBIENTE_PRODUCAO;
+    ambienteProducao = config.AMBIENTE_PRODUCAO ? config.AMBIENTE_PRODUCAO : false;
     initEvents();
     loadMachinesData();
   });
