@@ -1,5 +1,5 @@
 // Variáveis globais
-let ambienteProducao = false; // Alterar para false em ambiente de teste
+let ambienteProducao = false;
 let allMachines = [];
 let allAlerts = [];
 let currentTheme = localStorage.getItem('theme') || 'light';
@@ -7,6 +7,24 @@ let currentView = 'dashboard';
 let currentMetric = 'memory';
 let currentChartType = 'doughnut';
 const modal = document.getElementById('machine-modal');
+
+async function fetchConfig() {
+  try {
+    const configResponse = await fetch('./config.json');
+    if (!configResponse.ok) {
+      throw new Error(`Erro HTTP ${configResponse.status}: ${configResponse.statusText}`);
+    }
+    config = await configResponse.json();
+    return config;
+  } catch (error) {
+    console.error('Erro ao carregar configuração: ', error);
+  }
+}
+
+fetchConfig().then((config) => {
+  ambienteProducao = config.AMBIENTE_PRODUCAO;
+});
+
 
 // Aplicar tema salvo
 if (currentTheme === 'dark') {
@@ -29,7 +47,7 @@ async function loadMachinesData() {
     try {
       if (ambienteProducao) {
         try {
-          const manifestResponse = await fetch('./manifest.json');
+          const manifestResponse = await fetch('../manifest.json');
           if (!manifestResponse.ok) {
             throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
           }
@@ -41,7 +59,7 @@ async function loadMachinesData() {
       } else {
         try {
           console.log('Carregando manifesto alternativo...');
-          const manifestResponse = await fetch('./manifest_exemple.json');
+          const manifestResponse = await fetch('manifest_exemple.json');
           if (!manifestResponse.ok) {
             throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
           }

@@ -5,3 +5,4 @@ libs
 csv_data
 alerts
 sqlite*
+config.json
