@@ -1,2 +1,7 @@
 manifest.json
 machines/*
+logs/*
+libs/*
+csv_data/*
+alerts/*
+sqlite*
