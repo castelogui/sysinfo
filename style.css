@@ -11,6 +11,9 @@
   --border-color: #dee2e6;
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   --transition: all 0.3s ease;
+  --success: #11b30b;
+  --warning: #f4f725;
+  --danger: #e63946;
 }
 
 .dark-theme {
@@ -194,6 +197,18 @@ header {
   font-size: 2rem;
   margin-bottom: 15px;
   color: var(--accent-primary);
+}
+
+#stat-ok i{
+  color: var(--success);
+}
+
+#stat-warning i{
+  color: var(--warning);
+}
+
+#stat-critical i{
+  color: var(--danger);
 }
 
 .stat-card h3 {
