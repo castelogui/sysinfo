@@ -1102,6 +1102,7 @@ function Get-SystemInventory {
             DriverVersion = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
             DriverDate    = if ($gpuMain) { $gpuMain.DriverDate } else { $null }
             VRAM_GB       = if ($gpuMain -and $gpuMain.AdapterRAM) { [math]::Round($gpuMain.AdapterRAM / 1GB, 2) } else { $null } 
+            Resolution    = if ($gpuMain) { "$($gpuMain.CurrentHorizontalResolution)x$($gpuMain.CurrentVerticalResolution)p" } else { $null }
         }
         RAM            = [pscustomobject]@{
             TotalGB     = $totalRAM
