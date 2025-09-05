@@ -1239,7 +1239,7 @@ function exportCSV() {
 document.addEventListener('DOMContentLoaded', () => {
   fetchConfig().then((config) => {
     ambienteProducao = config.AMBIENTE_PRODUCAO ? config.AMBIENTE_PRODUCAO : false;
-    initEvents();
-    loadMachinesData();
   });
+  initEvents();
+  loadMachinesData();
 });
