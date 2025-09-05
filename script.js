@@ -18,6 +18,12 @@ async function fetchConfig() {
     return config;
   } catch (error) {
     console.error('Erro ao carregar configuração: ', error);
+    const configResponse = await fetch('./config_exemple.json');
+    if (!configResponse.ok) {
+      throw new Error(`Erro HTTP ${configResponse.status}: ${configResponse.statusText}`);
+    }
+    config = await configResponse.json();
+    return config;
   }
 }
 
@@ -1239,7 +1245,7 @@ function exportCSV() {
 document.addEventListener('DOMContentLoaded', () => {
   fetchConfig().then((config) => {
     ambienteProducao = config.AMBIENTE_PRODUCAO ? config.AMBIENTE_PRODUCAO : false;
+    initEvents();
+    loadMachinesData();
   });
-  initEvents();
-  loadMachinesData();
 });
