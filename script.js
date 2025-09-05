@@ -231,8 +231,15 @@ function createMachineCard(machine) {
           </div>
 
           <div class="info-item">
-            <div class="info-label"><i class="fas fa-microchip"></i> GPU</div>
-            <div>${machine.GPU?.Name || 'N/A'}</div>
+            <div class="info-label"><i class="fas fa-exclamation-triangle"></i> Alertas</div>
+            <div>
+              <ul>
+                ${machine.IssuesCrit.map(issue => `<li style="list-style-type: none;"><i class="fas fa-exclamation-circle" style="color: var(--danger);"></i> ${issue}</li>`).join('')}
+              </ul>
+              <ul>
+                ${machine.IssuesWarn.map(issue => `<li style="list-style-type: none;"><i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> ${issue}</li>`).join('')}
+              </ul>
+            </div>
           </div>
           
           <div class="info-item">
@@ -339,64 +346,78 @@ function createDetailsContent(machine) {
             <div class="detail-item-value">${machine.ScriptVersion || 'N/A'}</div>
           </div>
         </div>
-        
-        <div class="detail-section">
-          <h4><i class="fas fa-desktop"></i> Sistema Operacional</h4>
-          <p><strong>Nome:</strong> ${machine.OS?.Caption || 'N/A'}</p>
-          <p><strong>Versão:</strong> ${machine.OS?.Version || 'N/A'}</p>
-          <p><strong>Build:</strong> ${machine.OS?.Build || 'N/A'}</p>
-          <p><strong>Arquitetura:</strong> ${machine.OS?.Architecture || 'N/A'}</p>
-          <p><strong>Instalado em:</strong> ${formatDateMS(machine.OS?.InstallDate) || 'N/A'}</p>
-          <p><strong>Último boot:</strong> ${formatDateMS(machine.OS?.LastBoot) || 'N/A'}</p>
-          <p><strong>Uptime:</strong> ${machine.OS?.Uptime || 'N/A'}</p>
-          <p><strong>Usuário Logado:</strong> ${machine.Computer?.User || 'N/A'}</p>
-        </div>
-      `;
-
-  // Informações do Computador
-  detailsHTML += `
-        <div class="detail-section">
-          <h4><i class="fas fa-desktop"></i> Computador</h4>
-          <p><strong>Marca: </strong>${machine.Computer?.Manufacturer || 'N/A'}</p>
-          <p><strong>Modelo: </strong>${machine.Computer?.Family || 'N/A'}</p>
-          <p><strong>S/N: </strong>${machine.Computer?.Serial || 'N/A'}</p>
+        <div class="detail-content">
+          <div class="detail-section">
+            <h4><i class="fas fa-desktop"></i> Sistema Operacional</h4>
+            <p><strong>Nome:</strong> ${machine.OS?.Caption || 'N/A'}</p>
+            <p><strong>Versão:</strong> ${machine.OS?.Version || 'N/A'}</p>
+            <p><strong>Build:</strong> ${machine.OS?.Build || 'N/A'}</p>
+            <p><strong>Arquitetura:</strong> ${machine.OS?.Architecture || 'N/A'}</p>
+            <p><strong>Instalado em:</strong> ${formatDateMS(machine.OS?.InstallDate) || 'N/A'}</p>
+            <p><strong>Último boot:</strong> ${formatDateMS(machine.OS?.LastBoot) || 'N/A'}</p>
+            <p><strong>Uptime:</strong> ${machine.OS?.Uptime || 'N/A'}</p>
+            <p><strong>Usuário Logado:</strong> ${machine.Computer?.User || 'N/A'}</p>
           </div>
-      
-      `;
+          <div class="detail-section">
+            <h4><i class="fas fa-desktop"></i> Computador</h4>
+            <p><strong>Marca: </strong>${machine.Computer?.Manufacturer || 'N/A'}</p>
+            <p><strong>Modelo: </strong>${machine.Computer?.Family || 'N/A'}</p>
+            <p><strong>S/N: </strong>${machine.Computer?.Serial || 'N/A'}</p>
+          </div>
+        </div>
+        `;
 
   // Hardware
   detailsHTML += `
           </div>
           <div class="tab-content" id="tab-hardware">
-            <div class="detail-section">
-              <h4><i class="fas fa-microchip"></i> Processador</h4>
-              <p><strong>Nome:</strong> ${machine.CPU?.Name || 'N/A'}</p>
-              <p><strong>Núcleos:</strong> ${machine.CPU?.Cores || 'N/A'} cores, ${machine.CPU?.Logical || 'N/A'} threads</p>
-              <p><strong>Clock Máximo:</strong> ${machine.CPU?.MaxClockMHz || 'N/A'} MHz</p>
+          
+            <div class="detail-content">
+              <div class="detail-section">
+                <h4><i class="fas fa-microchip"></i> Processador</h4>
+                <p><strong>Nome:</strong> ${machine.CPU?.Name || 'N/A'}</p>
+                <p><strong>Núcleos:</strong> ${machine.CPU?.Cores || 'N/A'} cores, ${machine.CPU?.Logical || 'N/A'} threads</p>
+                <p><strong>Clock Máximo:</strong> ${machine.CPU?.MaxClockMHz || 'N/A'} MHz</p>
+              </div>
+
+              <div class="detail-section">
+                <h4><i class="fas fa-microchip"></i> Placa de Vídeo</h4>
+                <p><strong>Nome:</strong> ${machine.GPU?.Name || 'N/A'}</p>
+                <p><strong>VRAM:</strong> ${machine.GPU?.VRAM_GB || 'N/A'} GB</p>
+                <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
+              </div>
             </div>
             
-            <div class="detail-section">
-              <h4><i class="fas fa-memory"></i> Memória RAM</h4>
-              <p><strong>Total:</strong> ${machine.RAM?.TotalGB || 'N/A'} GB</p>
-              <p><strong>Livre:</strong> ${machine.RAM?.FreeGB || 'N/A'} GB (${machine.RAM?.FreePercent || 'N/A'}%)</p>
-      `;
+            <div class="detail-content">
+              <div class="detail-section">
+                <h4><i class="fas fa-memory"></i> Memória RAM</h4>
+                <p><strong>Total:</strong> ${machine.RAM?.TotalGB || 'N/A'} GB</p>
+                <p><strong>Livre:</strong> ${machine.RAM?.FreeGB || 'N/A'} GB (${machine.RAM?.FreePercent || 'N/A'}%)</p>
+            `;
 
   if (machine.RAM?.Modules && machine.RAM.Modules.length > 0) {
     detailsHTML += `<h5>Módulos:</h5>`;
     machine.RAM.Modules.forEach(module => {
       detailsHTML += `
-            <div style="margin-left: 20px; margin-bottom: 10px;">
-              <p><strong>Banco:</strong> ${module.Bank || 'N/A'}</p>
-              <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
-              <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
-              <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
-              <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
-            </div>
-          `;
+                <div style="margin-left: 20px; margin-bottom: 10px;">
+                  <p><strong>Banco:</strong> ${module.Bank || 'N/A'}</p>
+                  <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
+                  <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
+                  <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
+                  <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
+                </div>
+              </div>
+              `;
     });
   }
 
-  detailsHTML += `</div>`;
+  detailsHTML += `<div class="detail-section">
+                      <h4><i class="fas fa-microchip"></i> Discos</h4>
+                      <p><strong>Nome:</strong> ${machine.GPU?.Name || 'N/A'}</p>
+                      <p><strong>VRAM:</strong> ${machine.GPU?.VRAM_GB || 'N/A'} GB</p>
+                      <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
+                  </div>
+                </div>`;
 
   // Software
   detailsHTML += `
@@ -557,7 +578,7 @@ function createDetailsContent(machine) {
     machine.EventLogs.forEach(event => {
       detailsHTML += `
                     <tr>
-                      <td>${formatDate(event.TimeCreated)}</td>
+                      <td>${formatDateMS(event.TimeCreated)}</td>
                       <td>${event.LogName}</td>
                       <td><span class="status-badge ${event.Level === 'Crítico' ? 'status-critical' : 'status-warning'}">${event.Level}</span></td>
                       <td>${event.Provider}</td>
@@ -655,6 +676,7 @@ function createDetailsContent(machine) {
   // Problemas reportados
   if (machine.IssuesCrit && machine.IssuesCrit.length > 0) {
     detailsHTML += `
+          <div class="detail-content">
             <div class="detail-section">
               <h4><i class="fas fa-exclamation-circle" style="color: var(--danger);"></i> Problemas Críticos</h4>
               <ul>
@@ -672,6 +694,7 @@ function createDetailsContent(machine) {
                 ${machine.IssuesWarn.map(issue => `<li>${issue}</li>`).join('')}
               </ul>
             </div>
+          </div>
         `;
   }
 
@@ -981,6 +1004,7 @@ function renderAlertsPanel() {
 
 // Função para filtrar máquinas
 function filterMachines() {
+  switchView('machines');
   const searchText = document.getElementById('search-input').value.toLowerCase();
   const statusFilter = document.getElementById('status-filter').value;
   const sortBy = document.getElementById('sort-by').value;
