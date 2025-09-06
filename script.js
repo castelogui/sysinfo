@@ -406,18 +406,39 @@ function createDetailsContent(machine) {
                   <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
                   <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
                 </div>
-              </div>
+                <br/>
               `;
     });
   }
-
-  detailsHTML += `<div class="detail-section">
-                      <h4><i class="fas fa-microchip"></i> Discos</h4>
-                      <p><strong>Nome:</strong> ${machine.GPU?.Name || 'N/A'}</p>
-                      <p><strong>VRAM:</strong> ${machine.GPU?.VRAM_GB || 'N/A'} GB</p>
-                      <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
-                  </div>
-                </div>`;
+  detailsHTML += `
+              </div>
+              <div class="detail-section">
+                      <h4><i class="fas fa-microchip"></i> Armazenamento</h4>
+                      <h5>Volumes:</h5>
+                      `
+              machine.Storage?.Volumes?.forEach(volume => {
+                detailsHTML += `
+                      <div style="margin-left: 20px; margin-bottom: 10px;">
+                        <p><strong>Drive:</strong> ${volume.DriveLetter || 'N/A'}: ${volume.Label}</p>
+                        <p><strong>Sistema de Arquivos:</strong> ${volume.FileSystem || 'N/A'}</p>
+                        <p><strong>Capacidade:</strong> ${volume.SizeGB || 'N/A'} GB | Livre: ${volume.FreeGB || 'N/A'} GB (${volume.FreePercent || 'N/A'}%)</p>
+                      </div>
+                      <br/>`
+                    });
+              detailsHTML += `<h5>Discos:</h5>`;
+              machine.Storage?.Disks?.forEach(disk => {
+                detailsHTML += `
+                      <div style="margin-left: 20px; margin-bottom: 10px;">
+                        <p><strong>Tipo:</strong> ${disk.Type || 'N/A'} ${disk.Model || 'N/A'}</p>
+                        <p><strong>S/N:</strong> ${disk.Serial || 'N/A'}</p>
+                        <p><strong>Capacidade:</strong> ${disk.SizeGB || 'N/A'} GB</p>
+                      </div>
+                      <br/>
+                    `;
+              });
+  detailsHTML += `
+        </div>
+      </div>`;
 
   // Software
   detailsHTML += `
