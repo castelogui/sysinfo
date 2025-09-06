@@ -119,7 +119,7 @@ npm install -g http-server
 ou
 ```powershell
 # Iniciar dashboard
-npx http-server -p 8080 -c-1
+npx http-server . -a 0.0.0.0 -p 8080
 
 # Acessar no navegador: http://localhost:8080
 ```
