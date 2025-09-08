@@ -762,12 +762,6 @@ function updateStats() {
   document.getElementById('warning-machines').textContent = warning;
   document.getElementById('critical-machines').textContent = critical;
   document.getElementById('machine-count').textContent = `${total} máquinas`;
-
-  // Atualizar tendências (simulado)
-  document.getElementById('trend-total').textContent = '↗ +2%';
-  document.getElementById('trend-ok').textContent = '↗ +5%';
-  document.getElementById('trend-warning').textContent = '↘ -3%';
-  document.getElementById('trend-critical').textContent = '→ 0%';
 }
 
 // Função para atualizar o gráfico de recursos
