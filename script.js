@@ -8,9 +8,32 @@ let currentMetric = 'memory';
 let currentChartType = 'doughnut';
 const modal = document.getElementById('machine-modal');
 
+/* ====== INÍCIO: Anti-cache (adicionado) ====== */
+const NO_CACHE_INIT = {
+  cache: 'no-store',
+  headers: {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }
+};
+
+function bust(url) {
+  try {
+    const u = new URL(url, window.location.href);
+    // parâmetro único por requisição
+    u.searchParams.set('_', Date.now().toString());
+    return u.toString();
+  } catch {
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}_=${Date.now()}`;
+  }
+}
+/* ====== FIM: Anti-cache (adicionado) ====== */
+
 async function fetchConfig() {
   try {
-    const configResponse = await fetch('./config.json');
+    const configResponse = await fetch(bust('./config.json'), NO_CACHE_INIT);
     if (!configResponse.ok) {
       throw new Error(`Erro HTTP ${configResponse.status}: ${configResponse.statusText}`);
     }
@@ -18,7 +41,7 @@ async function fetchConfig() {
     return config;
   } catch (error) {
     console.error('Erro ao carregar configuração: ', error);
-    const configResponse = await fetch('./config_exemple.json');
+    const configResponse = await fetch(bust('./config_exemple.json'), NO_CACHE_INIT);
     if (!configResponse.ok) {
       throw new Error(`Erro HTTP ${configResponse.status}: ${configResponse.statusText}`);
     }
@@ -48,7 +71,7 @@ async function loadMachinesData() {
     try {
       if (ambienteProducao) {
         try {
-          const manifestResponse = await fetch('manifest.json');
+          const manifestResponse = await fetch(bust('manifest.json'), NO_CACHE_INIT);
           if (!manifestResponse.ok) {
             throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
           }
@@ -60,7 +83,7 @@ async function loadMachinesData() {
       } else {
         try {
           console.log('Carregando manifesto alternativo...');
-          const manifestResponse = await fetch('manifest_exemple.json');
+          const manifestResponse = await fetch(bust('manifest_exemple.json'), NO_CACHE_INIT);
           if (!manifestResponse.ok) {
             throw new Error(`Erro HTTP ${manifestResponse.status}: ${manifestResponse.statusText}`);
           }
@@ -79,7 +102,7 @@ async function loadMachinesData() {
     // Carregar dados de cada máquina
     for (const entry of manifest) {
       try {
-        const machineResponse = await fetch(entry.Json);
+        const machineResponse = await fetch(bust(entry.Json), NO_CACHE_INIT);
         if (!machineResponse.ok) {
           console.error(`Erro ao carregar ${entry.Json}: ${machineResponse.status}`);
           continue;
