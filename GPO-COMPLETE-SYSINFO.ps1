@@ -939,6 +939,57 @@ function Get-SystemInventory {
                 }
             })
     }
+
+    # Monitores (EDID)
+    $monitors = @()
+    try {
+        $ids = Try-Get { Get-CimInstance -Namespace root\wmi -Class WmiMonitorID } "Falha ao coletar informações de monitor"
+        $basic = Try-Get { Get-CimInstance -Namespace root\wmi -Class WmiMonitorBasicDisplayParams }
+
+        if ($ids) {
+            # helper para decodificar arrays UInt16 -> string
+            $decode = {
+                param([uint16[]]$u16)
+                if (-not $u16) { return $null }
+                -join ([char[]]($u16 | Where-Object { $_ -ne 0 }))
+            }
+
+            foreach ($m in @($ids | ForEach-Object { $_ })) {
+                # filtra ativos quando a prop existir
+                if ($m.PSObject.Properties.Name -contains 'Active') {
+                    if (-not $m.Active) { continue }
+                }
+
+                $b = $basic | Where-Object InstanceName -eq $m.InstanceName
+
+                $w = [double]($b.MaxHorizontalImageSize)  # cm
+                $h = [double]($b.MaxVerticalImageSize)    # cm
+                $diag = $null
+                if ($w -gt 0 -and $h -gt 0) {
+                    $diag = [math]::Round([math]::Sqrt([math]::Pow($w / 2.54, 2) + [math]::Pow($h / 2.54, 2)), 1)
+                }
+
+                $monitors += [pscustomobject]@{
+                    Manufacturer = (& $decode $m.ManufacturerName)   # PNP ID (DEL/SAM/ACR...)
+                    Name         = (& $decode $m.UserFriendlyName)
+                    Model        = (& $decode $m.ProductCodeID)
+                    Serial       = (& $decode $m.SerialNumberID)
+                    Week         = $m.WeekOfManufacture
+                    Year         = $m.YearOfManufacture
+                    SizeInches   = $diag
+                    WidthCm      = if ($w) { [int]$w } else { $null }
+                    HeightCm     = if ($h) { [int]$h } else { $null }
+                    Input        = if ($b -and ($b.PSObject.Properties.Name -contains 'VideoInputType')) {
+                        if ($b.VideoInputType) { 'Digital' } else { 'Analógica' }
+                    }
+                    else { $null }
+                    InstanceName = $m.InstanceName
+                }
+            }
+        }
+    }
+    catch {}
+
     
     # Rede
     $netCfg = Try-Get { Get-NetIPConfiguration } "Falha ao coletar configuração de rede"
@@ -1104,6 +1155,11 @@ function Get-SystemInventory {
             VRAM_GB       = if ($gpuMain -and $gpuMain.AdapterRAM) { [math]::Round($gpuMain.AdapterRAM / 1GB, 2) } else { $null } 
             Resolution    = if ($gpuMain) { "$($gpuMain.CurrentHorizontalResolution)x$($gpuMain.CurrentVerticalResolution)p" } else { $null }
         }
+        Monitor        = [pscustomobject]@{
+            Count    = ($monitors | Measure-Object).Count
+            Monitors = @($monitors)
+        }
+
         RAM            = [pscustomobject]@{
             TotalGB     = $totalRAM
             FreeGB      = $freeRAM
