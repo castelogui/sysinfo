@@ -428,6 +428,8 @@ function createDetailsContent(machine) {
                   <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
                   <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
                   <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
+                  <p><strong>Tipo:</strong> ${module.Type || 'N/A'}</p>
+                  <p><strong>Part Number:</strong> ${module.Part || 'N/A'}</p>
                 </div>
                 <br/>
               `;
