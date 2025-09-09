@@ -1070,17 +1070,26 @@ function filterMachines() {
     return matchesSearch && matchesStatus;
   });
 
-  // Ordenar resultados
-  filtered.sort((a, b) => {
-    if (sortBy === 'hostname') {
-      return a.Hostname.localeCompare(b.Hostname);
-    } else if (sortBy === 'status') {
-      return a.Status.localeCompare(b.Status);
-    } else if (sortBy === 'timestamp') {
-      return new Date(b.TimestampUtc) - new Date(a.TimestampUtc);
-    }
-    return 0;
-  });
+// Ordenar resultados
+filtered.sort((a, b) => {
+  if (sortBy === 'hostname') {
+    return a.Hostname.localeCompare(b.Hostname);
+  } else if (sortBy === 'status') {
+    return a.Status.localeCompare(b.Status);
+  } else if (sortBy === 'timestamp') {
+    return new Date(b.TimestampUtc) - new Date(a.TimestampUtc);
+  } else if (sortBy === 'ram_total_asc') {
+    const toNum = (v) => {
+      const n = (typeof v === 'number') ? v : parseFloat(v);
+      return Number.isFinite(n) ? n : Infinity; // sem valor vai pro fim
+    };
+    const aRam = toNum(a?.RAM?.TotalGB);
+    const bRam = toNum(b?.RAM?.TotalGB);
+    return aRam - bRam; // crescente
+  }
+  return 0;
+});
+
 
   renderMachines(filtered);
 }
