@@ -1,5 +1,5 @@
 ﻿<#
- Inventario-GPO-PerHost-Avancado.ps1
+ GPO-COMPLETE-SYSINFO.ps1
  - Coleta inventário local avançado
  - Suporte a múltiplos modos de coleta e armazenamento
  - Persistência histórica e alertas avançados
