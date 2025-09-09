@@ -420,16 +420,28 @@ function createDetailsContent(machine) {
 
   if (machine.RAM?.Modules && machine.RAM.Modules.length > 0) {
     detailsHTML += `<h5>Módulos:</h5>`;
+    const ddrMap = { 20:'DDR', 21:'DDR2', 24:'DDR3', 26:'DDR4', 30:'DDR5', 34:'DDR5' };
+    
+    // Converte valor para DDRx ou N/A
+    const asDdr = (val) => {
+      if (val === undefined || val === null) return 'N/A';
+      const s = String(val).trim();
+      if (!s) return 'N/A';
+      const n = Number(s);
+      if (!Number.isNaN(n)) return ddrMap[n] || 'N/A';
+      const up = s.toUpperCase();
+      return up.startsWith('DDR') ? up : 'N/A';
+    };
     machine.RAM.Modules.forEach(module => {
       detailsHTML += `
                 <div style="margin-left: 20px; margin-bottom: 10px;">
+                <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
+                <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
+                <p><strong>Tipo:</strong> ${asDdr(module.Type ?? module.SMBIOSType ?? module.SMBIOSMemoryType)}</p>
+                <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
+                <p><strong>Part Number:</strong> ${module.Part || 'N/A'}</p>
                   <p><strong>Banco:</strong> ${module.Bank || 'N/A'}</p>
                   <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
-                  <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
-                  <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
-                  <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
-                  <p><strong>Tipo:</strong> ${module.Type || 'N/A'}</p>
-                  <p><strong>Part Number:</strong> ${module.Part || 'N/A'}</p>
                 </div>
                 <br/>
               `;
