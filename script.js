@@ -410,7 +410,7 @@ function createDetailsContent(machine) {
                 <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
               </div>
             </div>
-            
+                      
             <div class="detail-content">
               <div class="detail-section">
                 <h4><i class="fas fa-memory"></i> Memória RAM</h4>
@@ -420,8 +420,8 @@ function createDetailsContent(machine) {
 
   if (machine.RAM?.Modules && machine.RAM.Modules.length > 0) {
     detailsHTML += `<h5>Módulos:</h5>`;
-    const ddrMap = { 20:'DDR', 21:'DDR2', 24:'DDR3', 26:'DDR4', 30:'DDR5', 34:'DDR5' };
-    
+    const ddrMap = { 20: 'DDR', 21: 'DDR2', 24: 'DDR3', 26: 'DDR4', 30: 'DDR5', 34: 'DDR5' };
+
     // Converte valor para DDRx ou N/A
     const asDdr = (val) => {
       if (val === undefined || val === null) return 'N/A';
@@ -453,18 +453,18 @@ function createDetailsContent(machine) {
                       <h4><i class="fas fa-microchip"></i> Armazenamento</h4>
                       <h5>Volumes:</h5>
                       `
-              machine.Storage?.Volumes?.forEach(volume => {
-                detailsHTML += `
+  machine.Storage?.Volumes?.forEach(volume => {
+    detailsHTML += `
                       <div style="margin-left: 20px; margin-bottom: 10px;">
                         <p><strong>Drive:</strong> ${volume.DriveLetter || 'N/A'}: ${volume.Label}</p>
                         <p><strong>Sistema de Arquivos:</strong> ${volume.FileSystem || 'N/A'}</p>
                         <p><strong>Capacidade:</strong> ${volume.SizeGB || 'N/A'} GB | Livre: ${volume.FreeGB || 'N/A'} GB (${volume.FreePercent || 'N/A'}%)</p>
                       </div>
                       <br/>`
-                    });
-              detailsHTML += `<h5>Discos:</h5>`;
-              machine.Storage?.Disks?.forEach(disk => {
-                detailsHTML += `
+  });
+  detailsHTML += `<h5>Discos:</h5>`;
+  machine.Storage?.Disks?.forEach(disk => {
+    detailsHTML += `
                       <div style="margin-left: 20px; margin-bottom: 10px;">
                         <p><strong>Tipo:</strong> ${disk.Type || 'N/A'} ${disk.Model || 'N/A'}</p>
                         <p><strong>S/N:</strong> ${disk.Serial || 'N/A'}</p>
@@ -472,10 +472,24 @@ function createDetailsContent(machine) {
                       </div>
                       <br/>
                     `;
-              });
+  });
   detailsHTML += `
-        </div>
-      </div>`;
+              </div>
+                <div class="detail-section">
+                  <h4><i class="fas fa-tv"></i> Monitores</h4>
+                  ${
+                    (machine.Monitor?.Monitors?.length > 0)
+                      ? machine.Monitor.Monitors.map(mon => `
+                          <div style="margin-left: 20px; margin-bottom: 12px;">
+                            <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'}</p>
+                            <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
+                            <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
+                            </div>
+                          `).join('')
+                        : '<p>N/A</p>'
+                      }
+                 </div>
+              </div>`;
 
   // Software
   detailsHTML += `
@@ -1070,25 +1084,25 @@ function filterMachines() {
     return matchesSearch && matchesStatus;
   });
 
-// Ordenar resultados
-filtered.sort((a, b) => {
-  if (sortBy === 'hostname') {
-    return a.Hostname.localeCompare(b.Hostname);
-  } else if (sortBy === 'status') {
-    return a.Status.localeCompare(b.Status);
-  } else if (sortBy === 'timestamp') {
-    return new Date(b.TimestampUtc) - new Date(a.TimestampUtc);
-  } else if (sortBy === 'ram_total_asc') {
-    const toNum = (v) => {
-      const n = (typeof v === 'number') ? v : parseFloat(v);
-      return Number.isFinite(n) ? n : Infinity; // sem valor vai pro fim
-    };
-    const aRam = toNum(a?.RAM?.TotalGB);
-    const bRam = toNum(b?.RAM?.TotalGB);
-    return aRam - bRam; // crescente
-  }
-  return 0;
-});
+  // Ordenar resultados
+  filtered.sort((a, b) => {
+    if (sortBy === 'hostname') {
+      return a.Hostname.localeCompare(b.Hostname);
+    } else if (sortBy === 'status') {
+      return a.Status.localeCompare(b.Status);
+    } else if (sortBy === 'timestamp') {
+      return new Date(b.TimestampUtc) - new Date(a.TimestampUtc);
+    } else if (sortBy === 'ram_total_asc') {
+      const toNum = (v) => {
+        const n = (typeof v === 'number') ? v : parseFloat(v);
+        return Number.isFinite(n) ? n : Infinity; // sem valor vai pro fim
+      };
+      const aRam = toNum(a?.RAM?.TotalGB);
+      const bRam = toNum(b?.RAM?.TotalGB);
+      return aRam - bRam; // crescente
+    }
+    return 0;
+  });
 
 
   renderMachines(filtered);
