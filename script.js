@@ -450,7 +450,7 @@ function createDetailsContent(machine) {
   detailsHTML += `
               </div>
               <div class="detail-section">
-                      <h4><i class="fas fa-microchip"></i> Armazenamento</h4>
+                      <h4><i class="fas fa-hdd"></i> Armazenamento</h4>
                       <h5>Volumes:</h5>
                       `
   machine.Storage?.Volumes?.forEach(volume => {
