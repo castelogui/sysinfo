@@ -126,6 +126,9 @@ async function loadMachinesData() {
       return;
     }
 
+    // Monta índice de busca para todas as máquinas
+    allMachines.forEach(buildSearchIndex);
+
     updateStats();
     if (currentView === 'machines') {
       renderMachines(allMachines);
@@ -1068,6 +1071,49 @@ function renderAlertsPanel() {
   });
 }
 
+// ===== Busca global: helpers =====
+// Remove acentos e deixa minúsculo
+function normalizeText(s) {
+  return String(s ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+// Caminha recursivamente por qualquer objeto/array e coleta valores "folha"
+function flattenValues(obj, bucket) {
+  if (obj == null) return;
+  if (!bucket) bucket = [];
+  if (Array.isArray(obj)) {
+    for (const v of obj) flattenValues(v, bucket);
+  } else if (typeof obj === 'object') {
+    for (const v of Object.values(obj)) flattenValues(v, bucket);
+  } else {
+    // número, boolean, string
+    bucket.push(String(obj));
+  }
+  return bucket;
+}
+
+// Constrói (e cacheia) um índice pesquisável por máquina
+function buildSearchIndex(machine) {
+  try {
+    const values = flattenValues(machine, []);
+    machine.__search = normalizeText(values.join(' '));
+  } catch {
+    machine.__search = '';
+  }
+}
+
+// Checa se a máquina bate com o texto de busca (todas as palavras)
+function machineMatchesSearch(machine, rawQuery) {
+  const q = normalizeText(rawQuery || '');
+  if (!q) return true; // busca vazia = tudo
+  const hay = machine.__search || '';
+  const tokens = q.split(/\s+/).filter(Boolean);
+  return tokens.every(t => hay.includes(t));
+}
+
 // Função para filtrar máquinas
 function filterMachines() {
   switchView('machines');
@@ -1076,8 +1122,7 @@ function filterMachines() {
   const sortBy = document.getElementById('sort-by').value;
 
   let filtered = allMachines.filter(machine => {
-    const matchesSearch = machine.Hostname.toLowerCase().includes(searchText) ||
-      (machine.OS?.Caption || '').toLowerCase().includes(searchText);
+    const matchesSearch = machineMatchesSearch(machine, searchText);
 
     const matchesStatus = statusFilter === 'all' || machine.Status === statusFilter;
 
