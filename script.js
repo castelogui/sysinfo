@@ -922,8 +922,8 @@ function updateStatusChart() {
     datasets: [{
       data: [ok, warning, critical],
       backgroundColor: [
-        '#4cc9f0',
-        '#f72585',
+        '#11b30b',
+        '#d9dd02',
         '#e63946'
       ],
       borderWidth: 1
