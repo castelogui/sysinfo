@@ -410,7 +410,6 @@ function createDetailsContent(machine) {
                 <h4><i class="fas fa-microchip"></i> Placa de Vídeo</h4>
                 <p><strong>Nome:</strong> ${machine.GPU?.Name || 'N/A'}</p>
                 <p><strong>VRAM:</strong> ${machine.GPU?.VRAM_GB || 'N/A'} GB</p>
-                <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
               </div>
             </div>
                       
@@ -487,6 +486,7 @@ function createDetailsContent(machine) {
                             <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'}</p>
                             <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
                             <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
+                            <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
                             </div>
                           `).join('')
                         : '<p>N/A</p>'
