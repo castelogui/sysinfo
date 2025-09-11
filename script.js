@@ -389,6 +389,7 @@ function createDetailsContent(machine) {
             <p><strong>Marca: </strong>${machine.Computer?.Manufacturer || 'N/A'}</p>
             <p><strong>Modelo: </strong>${machine.Computer?.Family || 'N/A'}</p>
             <p><strong>S/N: </strong>${machine.Computer?.Serial || 'N/A'}</p>
+            <p><strong>Bios Versão: </strong>${machine.BIOS?.Version || 'N/A'}</p>
           </div>
         </div>
         `;
@@ -482,15 +483,22 @@ function createDetailsContent(machine) {
                   ${
                     (machine.Monitor?.Monitors?.length > 0)
                       ? machine.Monitor.Monitors.map(mon => `
-                          <div style="margin-left: 20px; margin-bottom: 12px;">
-                            <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'}</p>
-                            <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
-                            <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
-                            <p><strong>Resolução:</strong> ${machine.GPU?.Resolution || 'N/A'}</p>
-                            </div>
-                          `).join('')
-                        : '<p>N/A</p>'
-                      }
+                        <div style="margin-left: 20px; margin-bottom: 12px;">
+                          <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'} ${mon.Primary ? '(Primário)' : ''}</p>
+                          <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
+                          <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
+                          <p><strong>Resolução:</strong> ${
+                            mon?.Resolution
+                            ? mon.Resolution
+                            : (mon?.WidthPx && mon?.HeightPx)
+                            ? `${mon.WidthPx}x${mon.HeightPx}`
+                            : (machine.GPU?.Resolution || 'N/A')
+                          }</p>
+                          <p><strong>Taxa de Atualização:</strong> ${machine.GPU?.RefreshRate || 'N/A'}</p>
+                        </div>
+                      `).join('')
+                    : '<p>N/A</p>'
+                  }
                  </div>
               </div>`;
 

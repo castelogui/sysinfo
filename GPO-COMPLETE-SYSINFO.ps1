@@ -989,6 +989,16 @@ function Get-SystemInventory {
         }
     }
     catch {}
+    # Anexar resolução (WinForms) aos monitores EDID por índice
+    if ($monitors.Count -gt 0 -and $WF_AllScreens.Count -gt 0) {
+        $max = [Math]::Min($monitors.Count, $WF_AllScreens.Count)
+        for ($i = 0; $i -lt $max; $i++) {
+            $monitors[$i] | Add-Member -NotePropertyName WidthPx   -NotePropertyValue $WF_AllScreens[$i].WidthPx   -Force
+            $monitors[$i] | Add-Member -NotePropertyName HeightPx  -NotePropertyValue $WF_AllScreens[$i].HeightPx  -Force
+            $monitors[$i] | Add-Member -NotePropertyName Primary   -NotePropertyValue $WF_AllScreens[$i].Primary   -Force
+            $monitors[$i] | Add-Member -NotePropertyName Resolution -NotePropertyValue ('{0}x{1}' -f $WF_AllScreens[$i].WidthPx, $WF_AllScreens[$i].HeightPx) -Force
+        }
+    }
 
     
     # Rede
@@ -1001,6 +1011,36 @@ function Get-SystemInventory {
     $boot = $os.LastBootUpTime; $uptime = Get-UptimeString $boot
     $cpuMain = $cpu | Select-Object -First 1
     $gpuMain = $gpu | Select-Object -First 1
+
+    # === WinForms: resolução por monitor (fallback) ===
+    try {
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+        $wfScreens = [System.Windows.Forms.Screen]::AllScreens
+        $wfPrimary = $wfScreens | Where-Object { $_.Primary } | Select-Object -First 1
+
+        $WF_AllScreens = @(
+            for ($i = 0; $i -lt $wfScreens.Count; $i++) {
+                [pscustomobject]@{
+                    Index      = $i
+                    Primary    = $wfScreens[$i].Primary
+                    WidthPx    = $wfScreens[$i].Bounds.Width
+                    HeightPx   = $wfScreens[$i].Bounds.Height
+                    DeviceName = $wfScreens[$i].DeviceName
+                }
+            }
+        )
+
+        $WF_PrimaryRes = if ($wfPrimary) {
+            '{0}x{1}' -f $wfPrimary.Bounds.Width, $wfPrimary.Bounds.Height
+        }
+        else { $null }
+    }
+    catch {
+        $WF_AllScreens = @()
+        $WF_PrimaryRes = $null
+    }
+    # ================================================
+
     
     # Temperaturas
     $acpiMaxC = $null; $diskMaxC = $null
@@ -1153,11 +1193,21 @@ function Get-SystemInventory {
             DriverVersion = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
             DriverDate    = if ($gpuMain) { $gpuMain.DriverDate } else { $null }
             VRAM_GB       = if ($gpuMain -and $gpuMain.AdapterRAM) { [math]::Round($gpuMain.AdapterRAM / 1GB, 2) } else { $null } 
-            Resolution    = if ($gpuMain) { "$($gpuMain.CurrentHorizontalResolution)x$($gpuMain.CurrentVerticalResolution)p" } else { $null }
+            Resolution    = if ($gpuMain -and $gpuMain.CurrentHorizontalResolution -and $gpuMain.CurrentVerticalResolution) {
+                '{0}x{1}' -f $gpuMain.CurrentHorizontalResolution, $gpuMain.CurrentVerticalResolution
+            }
+            elseif ($WF_PrimaryRes) {
+                $WF_PrimaryRes
+            }
+            else {
+                $null
+            }
+            RefreshRate   = if ($gpuMain) { "$($gpuMain.CurrentRefreshRate)Hz" } else { $null }
         }
         Monitor        = [pscustomobject]@{
-            Count    = ($monitors | Measure-Object).Count
-            Monitors = @($monitors)
+            Count           = ($monitors | Measure-Object).Count
+            Monitors        = @($monitors)
+            WinFormsScreens = @($WF_AllScreens)
         }
 
         RAM            = [pscustomobject]@{
