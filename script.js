@@ -629,7 +629,6 @@ function createDetailsContent(machine) {
           <thead>
             <tr>
               <th>Nome</th>
-              <th>Tipo</th>
               <th>Status</th>
               <th>IPv4</th>
               <th>MAC</th>
@@ -640,7 +639,6 @@ function createDetailsContent(machine) {
             ${machine.Network.Adapters.map(nic => `
               <tr>
                 <td>${nic.Name || 'N/A'}</td>
-                <td>${nic.Type || (/(wi-?fi|wireless|802\.11)/i.test(nic.Name || '') ? 'Wi-Fi' : 'Ethernet')}</td>                
                 <td><span class="status-badge ${nic.Status === 'Up' ? 'status-ok' : 'status-warning'}">${nic.Status || 'N/A'}</span></td>
                 <td>${Array.isArray(nic.IPv4) ? nic.IPv4.join(', ') : (nic.IPv4 || 'N/A')}</td>
                 <td>${nic.MAC || 'N/A'}</td>
