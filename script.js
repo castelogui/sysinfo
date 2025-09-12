@@ -390,6 +390,7 @@ function createDetailsContent(machine) {
             <p><strong>Modelo: </strong>${machine.Computer?.Family || 'N/A'}</p>
             <p><strong>S/N: </strong>${machine.Computer?.Serial || 'N/A'}</p>
             <p><strong>Bios Versão: </strong>${machine.BIOS?.Version || 'N/A'}</p>
+            <p><strong>Placa Mãe: </strong>${machine.BaseBoard?.Product || 'N/A'}</p>
           </div>
         </div>
         `;
@@ -480,25 +481,23 @@ function createDetailsContent(machine) {
               </div>
                 <div class="detail-section">
                   <h4><i class="fas fa-tv"></i> Monitores</h4>
-                  ${
-                    (machine.Monitor?.Monitors?.length > 0)
-                      ? machine.Monitor.Monitors.map(mon => `
+                  ${(machine.Monitor?.Monitors?.length > 0)
+      ? machine.Monitor.Monitors.map(mon => `
                         <div style="margin-left: 20px; margin-bottom: 12px;">
                           <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'} ${mon.Primary ? '(Primário)' : ''}</p>
                           <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
                           <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
-                          <p><strong>Resolução:</strong> ${
-                            mon?.Resolution
-                            ? mon.Resolution
-                            : (mon?.WidthPx && mon?.HeightPx)
-                            ? `${mon.WidthPx}x${mon.HeightPx}`
-                            : (machine.GPU?.Resolution || 'N/A')
-                          }</p>
+                          <p><strong>Resolução:</strong> ${mon?.Resolution
+          ? mon.Resolution
+          : (mon?.WidthPx && mon?.HeightPx)
+            ? `${mon.WidthPx}x${mon.HeightPx}`
+            : (machine.GPU?.Resolution || 'N/A')
+        }</p>
                           <p><strong>Taxa de Atualização:</strong> ${machine.GPU?.RefreshRate || 'N/A'}</p>
                         </div>
                       `).join('')
-                    : '<p>N/A</p>'
-                  }
+      : '<p>N/A</p>'
+    }
                  </div>
               </div>`;
 
@@ -620,18 +619,38 @@ function createDetailsContent(machine) {
           <div class="tab-content" id="tab-network">
       `;
 
-  if (machine.Network) {
+  // >>> NOVO: Tabela de adaptadores com velocidade
+  if (machine.Network?.Adapters && machine.Network.Adapters.length > 0) {
     detailsHTML += `
-            <div class="detail-section">
-              <h4><i class="fas fa-network-wired"></i> Rede</h4>
-              ${machine.Network.IPv4 && machine.Network.IPv4.length > 0 ? `
-                <p><strong>Endereços IPv4:</strong> ${machine.Network.IPv4.join(', ') || 'N/A'}</p>
-              ` : ''}
-              ${machine.Network.MACs && machine.Network.MACs.length > 0 ? `
-                <p><strong>Endereços MAC:</strong> ${machine.Network.MACs.join(', ') || 'N/A'}</p>
-              ` : ''}
-            </div>
-        `;
+    <div class="detail-section">
+      <h4><i class="fas fa-ethernet"></i> Interfaces de Rede</h4>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Status</th>
+              <th>IPv4</th>
+              <th>MAC</th>
+              <th>Velocidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${machine.Network.Adapters.map(nic => `
+              <tr>
+                <td>${nic.Name || 'N/A'}</td>
+                <td><span class="status-badge ${nic.Status === 'Up' ? 'status-ok' : 'status-warning'}">${nic.Status || 'N/A'}</span></td>
+                <td>${Array.isArray(nic.IPv4) ? nic.IPv4.join(', ') : (nic.IPv4 || 'N/A')}</td>
+                <td>${nic.MAC || 'N/A'}</td>
+                <td>${nic.Speed || 'N/A'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+    // <<< FIM NOVO >>>
   }
 
   // Eventos

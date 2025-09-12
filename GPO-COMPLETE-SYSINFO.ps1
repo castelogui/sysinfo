@@ -1004,8 +1004,62 @@ function Get-SystemInventory {
     # Rede
     $netCfg = Try-Get { Get-NetIPConfiguration } "Falha ao coletar configuração de rede"
     $ipv4s = @(); $macs = @()
-    try { $ipv4s = @($netCfg | ForEach-Object { $_.IPv4Address.IPAddress } | Where-Object { $_ } | Select-Object -Unique) } catch {}
-    try { $macs = @((Get-CimInstance Win32_NetworkAdapter -Filter "PhysicalAdapter=True" | Where-Object { $_.NetEnabled -eq $true }).MACAddress | Where-Object { $_ } | Select-Object -Unique) } catch {}
+
+    try { 
+        $ipv4s = @($netCfg | ForEach-Object { $_.IPv4Address.IPAddress } | Where-Object { $_ } | Select-Object -Unique) 
+    }
+    catch {}
+
+    try { 
+        $macs = @((Get-CimInstance Win32_NetworkAdapter -Filter "PhysicalAdapter=True" | Where-Object { $_.NetEnabled -eq $true }).MACAddress | Where-Object { $_ } | Select-Object -Unique) 
+    }
+    catch {}
+
+    # >>> NOVO: detalhar adaptadores com velocidade <<<
+    $adapters = Try-Get { Get-NetAdapter -Physical } "Falha ao coletar adaptadores de rede"
+    $nicDetails = @()
+
+    foreach ($na in @($adapters)) {
+        $alias = $na.Name
+        # IPv4s desse adaptador (por alias)
+        $ipsForAlias = @()
+        try {
+            $ipsForAlias = @(
+                $netCfg | Where-Object { $_.InterfaceAlias -eq $alias } |
+                ForEach-Object { $_.IPv4Address.IPAddress } |
+                Where-Object { $_ }
+            )
+        }
+        catch {}
+
+        # LinkSpeed direto do NetAdapter (ex.: "1 Gbps"); se não vier, faz fallback para WMI (Speed em bps)
+        $speedHuman = $na.LinkSpeed
+        if (-not $speedHuman -or $speedHuman -eq '0 bps') {
+            try {
+                $wmi = Get-CimInstance Win32_NetworkAdapter -Filter "NetEnabled=True AND PhysicalAdapter=True" |
+                Where-Object { $_.PNPDeviceID -eq $na.PnPDeviceID }
+
+                $bps = $wmi.Speed
+                if ($bps) {
+                    if ($bps -ge 1e9) { $speedHuman = ('{0:N0} Gbps' -f ($bps / 1e9)) }
+                    elseif ($bps -ge 1e6) { $speedHuman = ('{0:N0} Mbps' -f ($bps / 1e6)) }
+                    elseif ($bps -ge 1e3) { $speedHuman = ('{0:N0} Kbps' -f ($bps / 1e3)) }
+                    else { $speedHuman = ('{0} bps' -f $bps) }
+                }
+            }
+            catch {}
+        }
+
+        $nicDetails += [pscustomobject]@{
+            Name   = $alias
+            Status = $na.Status
+            MAC    = $na.MacAddress
+            IPv4   = $ipsForAlias
+            Speed  = $speedHuman
+        }
+    }
+    # <<< FIM NOVO >>>
+
     
     # Uptime/CPU/GPU
     $boot = $os.LastBootUpTime; $uptime = Get-UptimeString $boot
@@ -1221,9 +1275,11 @@ function Get-SystemInventory {
             Disks   = @($discos)
         }
         Network        = [pscustomobject]@{
-            IPv4 = @($ipv4s)
-            MACs = @($macs)
+            IPv4     = @($ipv4s)
+            MACs     = @($macs)
+            Adapters = @($nicDetails)
         }
+
         Temps          = [pscustomobject]@{
             ACPI_MaxC = $acpiMaxC
             Disk_MaxC = $diskMaxC
