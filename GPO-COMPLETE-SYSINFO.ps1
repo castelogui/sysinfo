@@ -1000,7 +1000,39 @@ function Get-SystemInventory {
         }
     }
 
-    
+    # === Helper: converter velocidade para string dinâmica (Mbps/Gbps) ===
+    function Convert-SpeedToHuman {
+        param(
+            [string]$Link,                # ex.: "2.5 Gbps", "100 Mbps"
+            [Nullable[UInt64]]$Bps        # ex.: 1000000000
+        )
+        # Tenta extrair do LinkSpeed (texto)
+        $bpsCalc = $null
+        if ($Link) {
+            if ($Link -match '([\d\.,]+)\s*([GMK]?bps)') {
+                $val = [double](($matches[1] -replace ',', '.') )
+                $unit = $matches[2].ToLower()
+                switch ($unit) {
+                    'gbps' { $bpsCalc = $val * 1e9 }
+                    'mbps' { $bpsCalc = $val * 1e6 }
+                    'kbps' { $bpsCalc = $val * 1e3 }
+                    default { }
+                }
+            }
+        }
+        if ($null -eq $bpsCalc -and $Bps) { $bpsCalc = [double]$Bps }
+
+        if ($null -eq $bpsCalc) { return $null }
+
+        if ($bpsCalc -lt 1e9) {
+            return ('{0:N0} Mbps' -f ($bpsCalc / 1e6))
+        }
+        else {
+            return ('{0:N1} Gbps' -f ($bpsCalc / 1e9))
+        }
+    }
+
+
     # Rede
     $netCfg = Try-Get { Get-NetIPConfiguration } "Falha ao coletar configuração de rede"
     $ipv4s = @(); $macs = @()
@@ -1015,12 +1047,20 @@ function Get-SystemInventory {
     }
     catch {}
 
-    # >>> NOVO: detalhar adaptadores com velocidade <<<
-    $adapters = Try-Get { Get-NetAdapter -Physical } "Falha ao coletar adaptadores de rede"
+    # >>> NOVO: detalhar adaptadores (inclui Wi-Fi) com velocidade dinâmica
+    $adapters = Try-Get { Get-NetAdapter -IncludeHidden:$false } "Falha ao coletar adaptadores de rede"
+    $wmiPhys = Try-Get { Get-CimInstance Win32_NetworkAdapter -Filter "PhysicalAdapter=True" } "Falha ao coletar adaptadores (WMI)"
+    $physMap = @{}
+    foreach ($p in @($wmiPhys)) { if ($p.PNPDeviceID) { $physMap[$p.PNPDeviceID] = $true } }
+
     $nicDetails = @()
 
     foreach ($na in @($adapters)) {
+        # Filtra apenas físicos (inclui Wi-Fi), evitando virtuais
+        if ($na.PnPDeviceID -and -not $physMap.ContainsKey($na.PnPDeviceID)) { continue }
+
         $alias = $na.Name
+
         # IPv4s desse adaptador (por alias)
         $ipsForAlias = @()
         try {
@@ -1032,19 +1072,17 @@ function Get-SystemInventory {
         }
         catch {}
 
-        # LinkSpeed direto do NetAdapter (ex.: "1 Gbps"); se não vier, faz fallback para WMI (Speed em bps)
-        $speedHuman = $na.LinkSpeed
-        if (-not $speedHuman -or $speedHuman -eq '0 bps') {
-            try {
-                $wmi = Get-CimInstance Win32_NetworkAdapter -Filter "NetEnabled=True AND PhysicalAdapter=True" |
-                Where-Object { $_.PNPDeviceID -eq $na.PnPDeviceID }
+        # Detecta tipo (Wi-Fi/Ethernet) de forma robusta pelo texto da descrição
+        $type = if ($na.InterfaceDescription -match 'Wireless|Wi-?Fi|802\.11') { 'Wi-Fi' } else { 'Ethernet' }
 
-                $bps = $wmi.Speed
-                if ($bps) {
-                    if ($bps -ge 1e9) { $speedHuman = ('{0:N0} Gbps' -f ($bps / 1e9)) }
-                    elseif ($bps -ge 1e6) { $speedHuman = ('{0:N0} Mbps' -f ($bps / 1e6)) }
-                    elseif ($bps -ge 1e3) { $speedHuman = ('{0:N0} Kbps' -f ($bps / 1e3)) }
-                    else { $speedHuman = ('{0} bps' -f $bps) }
+        # Velocidade: prioriza LinkSpeed (texto), com fallback para WMI (Speed em bps)
+        $speedHuman = $null
+        $speedHuman = Convert-SpeedToHuman -Link $na.LinkSpeed
+        if (-not $speedHuman) {
+            try {
+                $wmi = @($wmiPhys | Where-Object { $_.PNPDeviceID -eq $na.PnPDeviceID })[0]
+                if ($wmi -and $wmi.Speed) {
+                    $speedHuman = Convert-SpeedToHuman -Bps $wmi.Speed
                 }
             }
             catch {}
@@ -1052,13 +1090,15 @@ function Get-SystemInventory {
 
         $nicDetails += [pscustomobject]@{
             Name   = $alias
+            Type   = $type
             Status = $na.Status
             MAC    = $na.MacAddress
             IPv4   = $ipsForAlias
             Speed  = $speedHuman
         }
     }
-    # <<< FIM NOVO >>>
+    # <<< FIM NOVO
+
 
     
     # Uptime/CPU/GPU
@@ -1277,8 +1317,9 @@ function Get-SystemInventory {
         Network        = [pscustomobject]@{
             IPv4     = @($ipv4s)
             MACs     = @($macs)
-            Adapters = @($nicDetails)
+            Adapters = @($nicDetails)  # contém Name, Type, Status, IPv4, MAC, Speed
         }
+
 
         Temps          = [pscustomobject]@{
             ACPI_MaxC = $acpiMaxC
