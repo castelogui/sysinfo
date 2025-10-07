@@ -937,6 +937,8 @@ function Get-SystemInventory {
                     Form       = $_.FormFactor
                     SMBIOSType = $_.SMBIOSMemoryType
                     Voltage    = [math]::Round($_.ConfiguredVoltage/1000,2)
+                    Min_Voltage= [math]::Round($_.MinVoltage/1000,2)
+                    Max_Voltage= [math]::Round($_.MaxVoltage/1000,2)
                 }
             })
     }
