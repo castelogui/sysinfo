@@ -936,6 +936,7 @@ function Get-SystemInventory {
                     ConfClk    = $_.ConfiguredClockSpeed
                     Form       = $_.FormFactor
                     SMBIOSType = $_.SMBIOSMemoryType
+                    Voltage    = [math]::Round($_.ConfiguredVoltage/1000,2)
                 }
             })
     }

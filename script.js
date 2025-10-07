@@ -444,8 +444,9 @@ function createDetailsContent(machine) {
                 <p><strong>Tipo:</strong> ${asDdr(module.Type ?? module.SMBIOSType ?? module.SMBIOSMemoryType)}</p>
                 <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
                 <p><strong>Part Number:</strong> ${module.Part || 'N/A'}</p>
-                  <p><strong>Banco:</strong> ${module.Bank || 'N/A'}</p>
-                  <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
+                <p><strong>Banco:</strong> ${module.Bank || 'N/A'}</p>
+                <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
+                <p><strong>Voltagem:</strong> ${module.Voltage ? module.Voltage + ' V' : 'N/A'}</p>
                 </div>
                 <br/>
               `;
