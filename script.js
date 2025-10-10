@@ -440,7 +440,8 @@ function createDetailsContent(machine) {
       detailsHTML += `
                 <div style="margin-left: 20px; margin-bottom: 10px;">
                 <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
-                <p><strong>Velocidade:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
+                <p><strong>Frequência do módulo:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
+                <p><strong>Frequência de operação atual:</strong> ${module.ConfClk || 'N/A'} MHz</p>
                 <p><strong>Tipo:</strong> ${asDdr(module.Type ?? module.SMBIOSType ?? module.SMBIOSMemoryType)}</p>
                 <p><strong>Fabricante:</strong> ${module.Manuf || 'N/A'}</p>
                 <p><strong>Part Number:</strong> ${module.Part || 'N/A'}</p>
