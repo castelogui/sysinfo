@@ -441,11 +441,7 @@ function createDetailsContent(machine) {
                 <div style="margin-left: 20px; margin-bottom: 10px;">
                 <p><strong>Tipo:</strong> ${asDdr(module.Type ?? module.SMBIOSType ?? module.SMBIOSMemoryType)}</p>
                 <p><strong>Capacidade:</strong> ${module.CapacityGB || 'N/A'} GB</p>
-<<<<<<< HEAD
                 <p><strong>Frequência suportada pelo módulo:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
-=======
-                <p><strong>Frequência do módulo:</strong> ${module.SpeedMHz || 'N/A'} MHz</p>
->>>>>>> bee5fd55c1c99ba221b53d00cb243b95768afaa0
                 <p><strong>Frequência de operação atual:</strong> ${module.ConfClk || 'N/A'} MHz</p>
                 <p><strong>Voltagem:</strong> ${module.Voltage ? module.Voltage + ' V' : 'N/A'}</p>
                 <p><strong>Slot:</strong> ${module.Slot || 'N/A'}</p>
