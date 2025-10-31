@@ -1117,13 +1117,19 @@ function flattenValues(obj, bucket) {
   if (Array.isArray(obj)) {
     for (const v of obj) flattenValues(v, bucket);
   } else if (typeof obj === 'object') {
-    for (const v of Object.values(obj)) flattenValues(v, bucket);
+
+    // Também indexa os nomes das chaves, além dos valores
+    for (const [k, v] of Object.entries(obj)) {
+      bucket.push(String(k));
+      flattenValues(v, bucket);
+    }
   } else {
     // número, boolean, string
     bucket.push(String(obj));
   }
   return bucket;
 }
+
 
 // Constrói (e cacheia) um índice pesquisável por máquina
 function buildSearchIndex(machine) {
@@ -1361,6 +1367,15 @@ function initEvents() {
       document.body.style.overflow = 'auto';
     }
   });
+
+  // Fechar modal com ESC
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.style.display === 'block') {
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+  });
+
 
   // Tabs de detalhes
   document.addEventListener('click', function (e) {
