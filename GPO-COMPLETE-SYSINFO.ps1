@@ -35,6 +35,8 @@ param(
     [int]$LockMaxTries = 60,
     [int]$LockSleepMs = 500
 )
+# Forçar execução no modo completo (opções removidas)
+$ModoColeta = "Completo"
 
 # ----------------- Configuração inicial -----------------
 $ErrorActionPreference = "Stop"
@@ -43,18 +45,19 @@ $startTime = Get-Date
 $scriptVersion = "2.2"
 
 # Configurações de log
-$logPath = Join-Path $RepoRoot "logs"
-$logFile = Join-Path $logPath ("inventory_{0}_{1:yyyyMMdd_HHmmss}.log" -f $computer, $startTime)
+$logPath = $null
+$logFile = $null
 
 # ----------------- Helpers melhorados -----------------
 function Write-Log {
-    param([string]$Message, [string]$Level = "INFO")
+    param([string]$Message, [ValidateSet("INFO","WARNING","ERROR")][string]$Level = "INFO")
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
-    Add-Content -Path $logFile -Value $logEntry
-    if ($Level -eq "ERROR") { Write-Error $Message }
-    elseif ($Level -eq "WARNING") { Write-Warning $Message }
-    else { Write-Host $logEntry }
+    switch ($Level) {
+        "ERROR"   { Write-Error $Message }
+        "WARNING" { Write-Warning $Message }
+        default   { Write-Host $logEntry }
+    }
 }
 
 function Test-Admin {
@@ -1302,8 +1305,7 @@ function Get-SystemInventory {
 try {
     # Preparação do ambiente
     New-Dir $RepoRoot
-    New-Dir $logPath
-    
+# (removido) New-Dir $logPath
     Write-Log "Iniciando inventário de TI - Versão $scriptVersion"
     Write-Log "Computador: $computer"
     Write-Log "Modo de coleta: $ModoColeta"
@@ -1311,7 +1313,7 @@ try {
     Write-Log "Admin: $(Test-Admin)"
     
     # Inicializar banco de dados (múltiplos métodos)
-    $dbInitialized = Initialize-Database -DbPath $SQLitePath
+$dbInitialized = $false  # Banco de dados desativado
     
     # Coletar dados do sistema
     $report = Get-SystemInventory
