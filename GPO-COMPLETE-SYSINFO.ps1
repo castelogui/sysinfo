@@ -1,9 +1,9 @@
-﻿<#
- GPO-COMPLETE-SYSINFO.ps1
- - Coleta inventário local avançado
- - Suporte a múltiplos modos de coleta e armazenamento
- - Persistência histórica e alertas avançados
- Requisitos: Windows PowerShell 5.1
+﻿# ﻿<#
+#  GPO-COMPLETE-SYSINFO.ps1
+#  - Coleta inventário local avançado
+#  - Suporte a múltiplos modos de coleta e armazenamento
+#  - Persistência histórica e alertas avançados
+#  Requisitos: Windows PowerShell 5.1
 #>
 
 param(
@@ -23,24 +23,24 @@ param(
     [int]$MaxProcessMemoryMB = 1024,
     
     # Configurações de banco
-    [string]$SQLitePath = ".\inventory.db",
     [switch]$SkipTemps,
     [switch]$DisableJSON,
     [switch]$EnableRemoteActions,
-    [switch]$UsePSSQLite,
-    [switch]$UseCSV,
-    [switch]$SkipDatabase,
     
     # Lock do manifesto
     [int]$LockMaxTries = 60,
     [int]$LockSleepMs = 500
 )
-# Forçar execução no modo completo (opções removidas)
-$ModoColeta = "Completo"
 
 # ----------------- Configuração inicial -----------------
 $ErrorActionPreference = "Stop"
 $computer = $env:COMPUTERNAME
+# Forçar execução completa (opções desativadas)
+$ModoColeta = "Completo"
+$Completo   = $true
+$Rapido     = $false
+$Minimo     = $false
+
 $startTime = Get-Date
 $scriptVersion = "2.2"
 
@@ -50,14 +50,18 @@ $logFile = $null
 
 # ----------------- Helpers melhorados -----------------
 function Write-Log {
-    param([string]$Message, [ValidateSet("INFO","WARNING","ERROR")][string]$Level = "INFO")
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] [$Level] $Message"
-    switch ($Level) {
-        "ERROR"   { Write-Error $Message }
-        "WARNING" { Write-Warning $Message }
-        default   { Write-Host $logEntry }
-    }
+param(
+    [string]$Message,
+    [ValidateSet("INFO","WARNING","ERROR")]
+    [string]$Level = "INFO"
+)
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$logEntry = "[$timestamp] [$Level] $Message"
+switch ($Level) {
+    "ERROR"   { Write-Error $Message }
+    "WARNING" { Write-Warning $Message }
+    default   { Write-Host $logEntry }
+}
 }
 
 function Test-Admin {
@@ -189,446 +193,12 @@ function ConvertTo-JsonForceArray {
     return ConvertTo-Json -InputObject $arr -Depth $Depth
 }
 
-# ----------------- Funções de Banco de Dados (Múltiplos Métodos) -----------------
-function Initialize-Database {
-    param([string]$DbPath)
-    
-    # Verificar se devemos pular banco de dados
-    if ($SkipDatabase) {
-        Write-Log "Armazenamento em banco desabilitado via parâmetro -SkipDatabase" "INFO"
-        return $false
-    }
-    
-    # Ordem de tentativa baseada nos parâmetros
-    $methods = @()
-    
-    if ($UsePSSQLite) {
-        $methods += @{Name = "PSSQLiteModule"; Action = { Initialize-PSSQLite -DbPath $DbPath } }
-    }
-    elseif ($UseCSV) {
-        $methods += @{Name = "CSVStorage"; Action = { Initialize-CSVStorage -DbPath $DbPath } }
-    }
-    else {
-        # Ordem padrão de tentativa
-        $methods = @(
-            @{Name = "SQLiteModule"; Action = { Initialize-SQLiteModule -DbPath $DbPath } },
-            @{Name = "PSSQLiteModule"; Action = { Initialize-PSSQLite -DbPath $DbPath } },
-            @{Name = "SQLiteRaw"; Action = { Initialize-SQLiteRaw -DbPath $DbPath } },
-            @{Name = "CSVStorage"; Action = { Initialize-CSVStorage -DbPath $DbPath } }
-        )
-    }
-    
-    foreach ($method in $methods) {
-        try {
-            Write-Log "Tentando método: $($method.Name)" "INFO"
-            $result = & $method.Action
-            if ($result) {
-                Write-Log "Banco inicializado com sucesso usando método: $($method.Name)" "INFO"
-                return $true
-            }
-        }
-        catch {
-            Write-Log "Método $($method.Name) falhou: $($_.Exception.Message)" "WARNING"
-        }
-    }
-    
-    Write-Log "Todos os métodos de banco de dados falharam. Funcionalidade limitada." "WARNING"
-    return $false
-}
-
-function Initialize-SQLiteModule {
-    param([string]$DbPath)
-    
-    try {
-        Import-Module SQLite -ErrorAction Stop 2>$null
-        Write-Log "Módulo SQLite carregado com sucesso" "INFO"
-        
-        # Criar conexão e tabelas
-        $conn = New-Object System.Data.SQLite.SQLiteConnection
-        $conn.ConnectionString = "Data Source=$DbPath"
-        $conn.Open()
-        
-        $command = $conn.CreateCommand()
-        $command.CommandText = @"
-CREATE TABLE IF NOT EXISTS machine_inventory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hostname TEXT NOT NULL,
-    timestamp DATETIME NOT NULL,
-    data_json TEXT NOT NULL,
-    status TEXT NOT NULL,
-    os_name TEXT,
-    collection_mode TEXT
-);
-"@
-        $command.ExecuteNonQuery()
-        $conn.Close()
-        
-        return $true
-    }
-    catch {
-        Write-Log "Método SQLiteModule falhou: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
-function Initialize-PSSQLite {
-    param([string]$DbPath)
-    
-    try {
-        # Tentar carregar módulo PSSQLite
-        $module = Get-Module -Name PSSQLite -ListAvailable -ErrorAction SilentlyContinue
-        if (-not $module) {
-            Write-Log "Módulo PSSQLite não encontrado" "WARNING"
-            return $false
-        }
-        
-        Import-Module PSSQLite -ErrorAction Stop 2>$null
-        Write-Log "Módulo PSSQLite carregado com sucesso" "INFO"
-        
-        # Criar conexão usando PSSQLite
-        $conn = New-Object System.Data.SQLite.SQLiteConnection
-        $conn.ConnectionString = "Data Source=$DbPath"
-        $conn.Open()
-        
-        $command = $conn.CreateCommand()
-        $command.CommandText = @"
-CREATE TABLE IF NOT EXISTS machine_inventory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hostname TEXT NOT NULL,
-    timestamp DATETIME NOT NULL,
-    data_json TEXT NOT NULL,
-    status TEXT NOT NULL,
-    os_name TEXT,
-    collection_mode TEXT
-);
-"@
-        $command.ExecuteNonQuery()
-        $conn.Close()
-        
-        return $true
-    }
-    catch {
-        Write-Log "Método PSSQLite falhou: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
-function Initialize-CSVStorage {
-    param([string]$DbPath)
-    
-    try {
-        $csvDir = "$RepoRoot\csv_data"
-        New-Item -ItemType Directory -Path $csvDir -Force | Out-Null
-        
-        # Criar arquivo CSV de metadados
-        $csvFile = "$csvDir\database_info.csv"
-        if (-not (Test-Path $csvFile)) {
-            "hostname,timestamp,status,os_name,collection_mode,json_file" | Out-File -FilePath $csvFile -Encoding UTF8
-        }
-        
-        Write-Log "Armazenamento CSV inicializado: $csvDir" "INFO"
-        return $true
-    }
-    catch {
-        Write-Log "Método CSV falhou: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
-function Initialize-SQLiteRaw {
-    param([string]$DbPath)
-    
-    try {
-        # Tentar carregar DLL manualmente
-        $dllPaths = @(
-            ".\libs\System.Data.SQLite.dll",
-            ".\System.Data.SQLite.dll",
-            "$RepoRoot\libs\System.Data.SQLite.dll",
-            "$RepoRoot\System.Data.SQLite.dll"
-        )
-        
-        foreach ($dllPath in $dllPaths) {
-            if (Test-Path $dllPath) {
-                try {
-                    Add-Type -Path $dllPath -ErrorAction Stop
-                    Write-Log "DLL SQLite carregada: $dllPath" "INFO"
-                    
-                    # Criar conexão
-                    $conn = New-Object System.Data.SQLite.SQLiteConnection
-                    $conn.ConnectionString = "Data Source=$DbPath"
-                    $conn.Open()
-                    
-                    $command = $conn.CreateCommand()
-                    $command.CommandText = @"
-CREATE TABLE IF NOT EXISTS machine_inventory (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hostname TEXT NOT NULL,
-    timestamp DATETIME NOT NULL,
-    data_json TEXT NOT NULL,
-    status TEXT NOT NULL,
-    os_name TEXT,
-    collection_mode TEXT
-);
-"@
-                    $command.ExecuteNonQuery()
-                    $conn.Close()
-                    
-                    return $true
-                }
-                catch {
-                    Write-Log "Erro ao carregar DLL $dllPath : $($_.Exception.Message)" "WARNING"
-                }
-            }
-        }
-        
-        Write-Log "Nenhuma DLL SQLite encontrada ou carregável" "WARNING"
-        return $false
-    }
-    catch {
-        Write-Log "Método SQLiteRaw falhou: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
 function Save-ToDatabase {
-    param(
-        [string]$DbPath,
-        [string]$Hostname,
-        [datetime]$Timestamp,
-        [string]$JsonData,
-        [string]$Status,
-        [string]$OSName,
-        [string]$CollectionMode
-    )
-    
-    # Múltiplas tentativas de salvamento
-    $methods = @()
-    
-    if ($UseCSV) {
-        $methods += @{Name = "CSV"; Action = { Save-ToCSV @args } }
-    }
-    else {
-        $methods = @(
-            @{Name = "SQLiteModule"; Action = { Save-ToSQLiteModule @args } },
-            @{Name = "PSSQLite"; Action = { Save-ToPSSQLite @args } },
-            @{Name = "SQLiteRaw"; Action = { Save-ToSQLiteRaw @args } },
-            @{Name = "CSV"; Action = { Save-ToCSV @args } }
-        )
-    }
-    
-    foreach ($method in $methods) {
-        try {
-            $result = & $method.Action $DbPath $Hostname $Timestamp $JsonData $Status $OSName $CollectionMode
-            if ($result) {
-                Write-Log "Dados salvos com sucesso usando método: $($method.Name)" "INFO"
-                return $true
-            }
-        }
-        catch {
-            Write-Log "Método $($method.Name) falhou no salvamento: $($_.Exception.Message)" "WARNING"
-        }
-    }
-    
-    return $false
-}
-
-function Save-ToSQLiteModule {
-    param(
-        [string]$DbPath,
-        [string]$Hostname,
-        [datetime]$Timestamp,
-        [string]$JsonData,
-        [string]$Status,
-        [string]$OSName,
-        [string]$CollectionMode
-    )
-    
-    try {
-        Import-Module SQLite -ErrorAction Stop 2>$null
-        
-        $conn = New-Object System.Data.SQLite.SQLiteConnection
-        $conn.ConnectionString = "Data Source=$DbPath"
-        $conn.Open()
-        
-        $command = $conn.CreateCommand()
-        $command.CommandText = "INSERT INTO machine_inventory (hostname, timestamp, data_json, status, os_name, collection_mode) VALUES (@hostname, @timestamp, @data_json, @status, @os_name, @collection_mode)"
-        
-        $command.Parameters.AddWithValue("@hostname", $Hostname) | Out-Null
-        $command.Parameters.AddWithValue("@timestamp", $Timestamp.ToString("yyyy-MM-dd HH:mm:ss")) | Out-Null
-        $command.Parameters.AddWithValue("@data_json", $JsonData) | Out-Null
-        $command.Parameters.AddWithValue("@status", $Status) | Out-Null
-        $command.Parameters.AddWithValue("@os_name", $OSName) | Out-Null
-        $command.Parameters.AddWithValue("@collection_mode", $CollectionMode) | Out-Null
-        
-        $command.ExecuteNonQuery() | Out-Null
-        $conn.Close()
-        
-        return $true
-    }
-    catch {
-        Write-Log "Erro ao salvar no SQLiteModule: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
-function Save-ToPSSQLite {
-    param(
-        [string]$DbPath,
-        [string]$Hostname,
-        [datetime]$Timestamp,
-        [string]$JsonData,
-        [string]$Status,
-        [string]$OSName,
-        [string]$CollectionMode
-    )
-    
-    try {
-        Import-Module PSSQLite -ErrorAction Stop 2>$null
-        
-        $conn = New-Object System.Data.SQLite.SQLiteConnection
-        $conn.ConnectionString = "Data Source=$DbPath"
-        $conn.Open()
-        
-        $command = $conn.CreateCommand()
-        $command.CommandText = "INSERT INTO machine_inventory (hostname, timestamp, data_json, status, os_name, collection_mode) VALUES (@hostname, @timestamp, @data_json, @status, @os_name, @collection_mode)"
-        
-        $command.Parameters.AddWithValue("@hostname", $Hostname) | Out-Null
-        $command.Parameters.AddWithValue("@timestamp", $Timestamp.ToString("yyyy-MM-dd HH:mm:ss")) | Out-Null
-        $command.Parameters.AddWithValue("@data_json", $JsonData) | Out-Null
-        $command.Parameters.AddWithValue("@status", $Status) | Out-Null
-        $command.Parameters.AddWithValue("@os_name", $OSName) | Out-Null
-        $command.Parameters.AddWithValue("@collection_mode", $CollectionMode) | Out-Null
-        
-        $command.ExecuteNonQuery() | Out-Null
-        $conn.Close()
-        
-        return $true
-    }
-    catch {
-        Write-Log "Erro ao salvar no PSSQLite: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
-function Save-ToSQLiteRaw {
-    param(
-        [string]$DbPath,
-        [string]$Hostname,
-        [datetime]$Timestamp,
-        [string]$JsonData,
-        [string]$Status,
-        [string]$OSName,
-        [string]$CollectionMode
-    )
-    
-    try {
-        # Tentar carregar DLL manualmente
-        $dllPaths = @(
-            ".\libs\System.Data.SQLite.dll",
-            ".\System.Data.SQLite.dll",
-            "$RepoRoot\libs\System.Data.SQLite.dll"
-        )
-        
-        foreach ($dllPath in $dllPaths) {
-            if (Test-Path $dllPath) {
-                try {
-                    Add-Type -Path $dllPath -ErrorAction Stop
-                    
-                    $conn = New-Object System.Data.SQLite.SQLiteConnection
-                    $conn.ConnectionString = "Data Source=$DbPath"
-                    $conn.Open()
-                    
-                    $command = $conn.CreateCommand()
-                    $command.CommandText = "INSERT INTO machine_inventory (hostname, timestamp, data_json, status, os_name, collection_mode) VALUES (@hostname, @timestamp, @data_json, @status, @os_name, @collection_mode)"
-                    
-                    $command.Parameters.AddWithValue("@hostname", $Hostname) | Out-Null
-                    $command.Parameters.AddWithValue("@timestamp", $Timestamp.ToString("yyyy-MM-dd HH:mm:ss")) | Out-Null
-                    $command.Parameters.AddWithValue("@data_json", $JsonData) | Out-Null
-                    $command.Parameters.AddWithValue("@status", $Status) | Out-Null
-                    $command.Parameters.AddWithValue("@os_name", $OSName) | Out-Null
-                    $command.Parameters.AddWithValue("@collection_mode", $CollectionMode) | Out-Null
-                    
-                    $command.ExecuteNonQuery() | Out-Null
-                    $conn.Close()
-                    
-                    return $true
-                }
-                catch {
-                    Write-Log "Erro ao usar DLL $dllPath : $($_.Exception.Message)" "WARNING"
-                }
-            }
-        }
-        
-        return $false
-    }
-    catch {
-        Write-Log "Erro ao salvar no SQLiteRaw: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
-}
-
-function Save-ToCSV {
-    param(
-        [string]$DbPath,
-        [string]$Hostname,
-        [datetime]$Timestamp,
-        [string]$JsonData,
-        [string]$Status,
-        [string]$OSName,
-        [string]$CollectionMode
-    )
-    
-    try {
-        $csvDir = "$RepoRoot\csv_data"
-        $csvFile = "$csvDir\database_info.csv"
-        $jsonFile = "$csvDir\$Hostname-$(Get-Date $Timestamp -Format 'yyyyMMdd_HHmmss').json"
-        
-        # Salvar JSON separado
-        $JsonData | Out-File -FilePath $jsonFile -Encoding UTF8
-        
-        # Adicionar entrada CSV
-        $csvEntry = "$Hostname,$($Timestamp.ToString('yyyy-MM-dd HH:mm:ss')),$Status,$OSName,$CollectionMode,$(Split-Path $jsonFile -Leaf)"
-        Add-Content -Path $csvFile -Value $csvEntry -Encoding UTF8
-        
-        Write-Log "Dados salvos em CSV: $csvFile" "INFO"
-        return $true
-    }
-    catch {
-        Write-Log "Erro ao salvar em CSV: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
+return $false
 }
 
 function Save-Alert {
-    param(
-        [string]$DbPath,
-        [string]$Hostname,
-        [string]$AlertType,
-        [string]$AlertMessage,
-        [string]$AlertSeverity
-    )
-    
-    try {
-        # Para simplificar, vamos salvar alertas em arquivo CSV também
-        $alertDir = "$RepoRoot\alerts"
-        $alertFile = "$alertDir\alerts.csv"
-        
-        New-Dir $alertDir
-        
-        if (-not (Test-Path $alertFile)) {
-            "timestamp,hostname,alert_type,alert_message,alert_severity" | Out-File -FilePath $alertFile -Encoding UTF8
-        }
-        
-        $alertEntry = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'),$Hostname,$AlertType,$AlertMessage,$AlertSeverity"
-        Add-Content -Path $alertFile -Value $alertEntry -Encoding UTF8
-        
-        Write-Log "Alerta salvo: $AlertType - $AlertSeverity" "INFO"
-        return $true
-    }
-    catch {
-        Write-Log "Erro ao salvar alerta: $($_.Exception.Message)" "WARNING"
-        return $false
-    }
+return $false
 }
 
 # ----------------- Coleta de Dados Avançada -----------------
@@ -1305,7 +875,8 @@ function Get-SystemInventory {
 try {
     # Preparação do ambiente
     New-Dir $RepoRoot
-# (removido) New-Dir $logPath
+# (log desativado)     New-Dir $logPath
+    
     Write-Log "Iniciando inventário de TI - Versão $scriptVersion"
     Write-Log "Computador: $computer"
     Write-Log "Modo de coleta: $ModoColeta"
@@ -1372,16 +943,6 @@ $dbInitialized = $false  # Banco de dados desativado
             finally {
                 Release-Lock -stream $lockStream -lockPath $lockPath
             }
-        }
-    }
-    
-    # Salvar no banco (se inicializado com sucesso)
-    if ($dbInitialized) {
-        $jsonData = $report | ConvertTo-Json -Depth 12
-        $saved = Save-ToDatabase -DbPath $SQLitePath -Hostname $computer -Timestamp (Get-Date) -JsonData $jsonData -Status $report.Status -OSName $report.OS.Caption -CollectionMode $ModoColeta
-        
-        if (-not $saved) {
-            Write-Log "Falha ao salvar em todos os métodos de banco de dados" "WARNING"
         }
     }
     
