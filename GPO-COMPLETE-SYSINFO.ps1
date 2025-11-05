@@ -8,7 +8,7 @@
 
 param(
     [string]$RepoRoot = ".",
-    [ValidateSet("Completo", "Rapido", "Minimo")]
+    [ValidateSet("Completo", "Minimo")]
     [string]$ModoColeta = "Completo",
     [int]$IntervaloExecucao = 0,
     
@@ -37,31 +37,24 @@ $ErrorActionPreference = "Stop"
 $computer = $env:COMPUTERNAME
 # Forçar execução completa (opções desativadas)
 $ModoColeta = "Completo"
-$Completo   = $true
-$Rapido     = $false
-$Minimo     = $false
 
 $startTime = Get-Date
 $scriptVersion = "2.2"
 
-# Configurações de log
-$logPath = $null
-$logFile = $null
-
 # ----------------- Helpers melhorados -----------------
 function Write-Log {
-param(
-    [string]$Message,
-    [ValidateSet("INFO","WARNING","ERROR")]
-    [string]$Level = "INFO"
-)
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-$logEntry = "[$timestamp] [$Level] $Message"
-switch ($Level) {
-    "ERROR"   { Write-Error $Message }
-    "WARNING" { Write-Warning $Message }
-    default   { Write-Host $logEntry }
-}
+    param(
+        [string]$Message,
+        [ValidateSet("INFO", "WARNING", "ERROR")]
+        [string]$Level = "INFO"
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    switch ($Level) {
+        "ERROR" { Write-Error $Message }
+        "WARNING" { Write-Warning $Message }
+        default { Write-Host $logEntry }
+    }
 }
 
 function Test-Admin {
@@ -194,11 +187,11 @@ function ConvertTo-JsonForceArray {
 }
 
 function Save-ToDatabase {
-return $false
+    return $false
 }
 
 function Save-Alert {
-return $false
+    return $false
 }
 
 # ----------------- Coleta de Dados Avançada -----------------
@@ -499,19 +492,19 @@ function Get-SystemInventory {
     if ($ram) {
         $ramMods = @($ram | ForEach-Object {
                 [pscustomobject]@{
-                    Bank       = $_.BankLabel
-                    Slot       = $_.DeviceLocator
-                    Manuf      = $_.Manufacturer
-                    Part       = $_.PartNumber
-                    Serial     = $_.SerialNumber
-                    CapacityGB = [math]::Round($_.Capacity / 1GB, 2)
-                    SpeedMHz   = $_.Speed
-                    ConfClk    = $_.ConfiguredClockSpeed
-                    Form       = $_.FormFactor
-                    SMBIOSType = $_.SMBIOSMemoryType
-                    Voltage    = [math]::Round($_.ConfiguredVoltage/1000,2)
-                    Min_Voltage= [math]::Round($_.MinVoltage/1000,2)
-                    Max_Voltage= [math]::Round($_.MaxVoltage/1000,2)
+                    Bank        = $_.BankLabel
+                    Slot        = $_.DeviceLocator
+                    Manuf       = $_.Manufacturer
+                    Part        = $_.PartNumber
+                    Serial      = $_.SerialNumber
+                    CapacityGB  = [math]::Round($_.Capacity / 1GB, 2)
+                    SpeedMHz    = $_.Speed
+                    ConfClk     = $_.ConfiguredClockSpeed
+                    Form        = $_.FormFactor
+                    SMBIOSType  = $_.SMBIOSMemoryType
+                    Voltage     = [math]::Round($_.ConfiguredVoltage / 1000, 2)
+                    Min_Voltage = [math]::Round($_.MinVoltage / 1000, 2)
+                    Max_Voltage = [math]::Round($_.MaxVoltage / 1000, 2)
                 }
             })
     }
@@ -875,16 +868,13 @@ function Get-SystemInventory {
 try {
     # Preparação do ambiente
     New-Dir $RepoRoot
-# (log desativado)     New-Dir $logPath
+    # (log desativado)     New-Dir $logPath
     
     Write-Log "Iniciando inventário de TI - Versão $scriptVersion"
     Write-Log "Computador: $computer"
     Write-Log "Modo de coleta: $ModoColeta"
     Write-Log "Usuário: $env:USERNAME"
     Write-Log "Admin: $(Test-Admin)"
-    
-    # Inicializar banco de dados (múltiplos métodos)
-$dbInitialized = $false  # Banco de dados desativado
     
     # Coletar dados do sistema
     $report = Get-SystemInventory
