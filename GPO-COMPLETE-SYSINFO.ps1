@@ -186,14 +186,6 @@ function ConvertTo-JsonForceArray {
     return ConvertTo-Json -InputObject $arr -Depth $Depth
 }
 
-function Save-ToDatabase {
-    return $false
-}
-
-function Save-Alert {
-    return $false
-}
-
 # ----------------- Coleta de Dados Avançada -----------------
 function Get-ProcessInfo {
     Write-Log "Coletando informações de processos"
@@ -703,11 +695,9 @@ function Get-SystemInventory {
     if ($totalRAM -and $freeRAM -ne $null) {
         if ($freeRAMpct -lt 10 -or $freeRAM -lt 1.0) {
             $crits += "RAM livre muito baixa"
-            Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "RAM" -AlertMessage "RAM livre muito baixa: $freeRAM GB ($freeRAMpct%)" -AlertSeverity "Crítico"
         }
         elseif ($freeRAMpct -lt $MinMemFreePercent -or $freeRAM -lt $MinMemFreeGB) {
             $warns += "RAM livre baixa"
-            Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "RAM" -AlertMessage "RAM livre baixa: $freeRAM GB ($freeRAMpct%)" -AlertSeverity "Atenção"
         }
     }
     
@@ -716,22 +706,18 @@ function Get-SystemInventory {
     $warnDisks = $volumes | Where-Object { $_.FreePercent -lt $MinDiskFreePercent -or $_.FreeGB -lt $MinDiskFreeGB }
     if ($lowDisks.Count -gt 0) {
         $crits += "Pouco espaço em disco"
-        Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Disco" -AlertMessage "Pouco espaço em disco em $($lowDisks.Count) volume(s)" -AlertSeverity "Crítico"
     }
     elseif ($warnDisks.Count -gt 0) {
         $warns += "Pouco espaço em disco"
-        Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Disco" -AlertMessage "Pouco espaço em disco em $($warnDisks.Count) volume(s)" -AlertSeverity "Atenção"
     }
     
     # Alertas de temperatura
     if ($maxTemp -ne $null) {
         if ($maxTemp -ge $HighTempCritC) {
             $crits += "Temperatura elevada"
-            Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Temperatura" -AlertMessage "Temperatura elevada: $maxTemp°C" -AlertSeverity "Crítico"
         }
         elseif ($maxTemp -ge $HighTempWarnC) {
-            $warns += "Temperatura alta"
-            Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Temperatura" -AlertMessage "Temperatura alta: $maxTemp°C" -AlertSeverity "Atenção"
+            $warns += "Temperatura alta"            
         }
     }
     
@@ -742,16 +728,10 @@ function Get-SystemInventory {
         
         if ($highCPUProcesses.Count -gt 0) {
             $warns += "Processos com alto uso de CPU"
-            foreach ($proc in $highCPUProcesses) {
-                Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Processo" -AlertMessage "Processo $($proc.Name) usando $($proc.CPU)% de CPU" -AlertSeverity "Atenção"
-            }
         }
         
         if ($highMemoryProcesses.Count -gt 0) {
             $warns += "Processos com alto uso de memória"
-            foreach ($proc in $highMemoryProcesses) {
-                Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Processo" -AlertMessage "Processo $($proc.Name) usando $($proc.MemoryMB) MB de memória" -AlertSeverity "Atenção"
-            }
         }
     }
     
@@ -760,9 +740,6 @@ function Get-SystemInventory {
         $stoppedServices = $serviceInfo | Where-Object { $_.Status -ne "Running" }
         if ($stoppedServices.Count -gt 0) {
             $warns += "Serviços críticos parados"
-            foreach ($svc in $stoppedServices) {
-                Save-Alert -DbPath $SQLitePath -Hostname $computer -AlertType "Serviço" -AlertMessage "Serviço $($svc.Name) parado" -AlertSeverity "Atenção"
-            }
         }
     }
     
