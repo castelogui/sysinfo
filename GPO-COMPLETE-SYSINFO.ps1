@@ -41,29 +41,6 @@ $ModoColeta = "Completo"
 $startTime = Get-Date
 $scriptVersion = "2.2"
 
-# Modo Escuro + Transparência desativada
-$reg = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
-New-Item -Path $reg -Force | Out-Null
-Set-ItemProperty -Path $reg -Name 'AppsUseLightTheme'    -Type DWord -Value 0 # Modo Escuro para apps
-Set-ItemProperty -Path $reg -Name 'ColorPrevalence'      -Type DWord -Value 0 # Modo Escuro para barra de tarefas e menu iniciar
-Set-ItemProperty -Path $reg -Name 'EnableTransparency'   -Type DWord -Value 0 # Desativa transparência
-Set-ItemProperty -Path $reg -Name 'SystemUsesLightTheme' -Type DWord -Value 0 # Modo Escuro para sistema
-
-# --- NTP / Sincronização automática  ---
-$peers = "pool.ntp.br"
-$poll  = 3600
-w32tm /config /manualpeerlist:$peers /syncfromflags:manual /update | Out-Null
-Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpClient' -Name SpecialPollInterval -Type DWord -Value $poll
-sc.exe config w32time start= auto | Out-Null
-Restart-Service w32time -Force
-w32tm /resync /force
-
-# --- Fuso horário: (UTC-04:00) Atlantic Time (Canada) ---
-tzutil /s "Atlantic Standard Time_dstoff"
-
-#Desabilitar Hibernação
-powercfg /h off
-
 # ----------------- Helpers melhorados -----------------
 function Write-Log {
     param(
