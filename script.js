@@ -496,7 +496,8 @@ function createDetailsContent(machine) {
             ? `${mon.WidthPx}x${mon.HeightPx}`
             : (machine.GPU?.Resolution || 'N/A')
         }</p>
-                          <p><strong>Taxa de Atualização:</strong> ${machine.GPU?.RefreshRate || 'N/A'}</p>
+                          <p><strong>Taxa de Atualização Atual:</strong> ${machine.GPU?.RefreshRate || 'N/A'}</p>
+                          <p><strong>Taxa de Atualização Máxima Suportada: ${machine.GPU?.MaxRefreshRate || 'N/A'}</p>
                         </div>
                       `).join('')
       : '<p>N/A</p>'

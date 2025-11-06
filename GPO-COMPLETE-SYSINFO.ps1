@@ -789,11 +789,11 @@ function Get-SystemInventory {
             ProcessorId = $cpuMain.ProcessorId
         }
         GPU            = [pscustomobject]@{
-            Name          = if ($gpuMain) { $gpuMain.Name } else { $null }
-            DriverVersion = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
-            DriverDate    = if ($gpuMain) { $gpuMain.DriverDate } else { $null }
-            VRAM_GB       = if ($gpuMain -and $gpuMain.AdapterRAM) { [math]::Round($gpuMain.AdapterRAM / 1GB, 2) } else { $null } 
-            Resolution    = if ($gpuMain -and $gpuMain.CurrentHorizontalResolution -and $gpuMain.CurrentVerticalResolution) {
+            Name           = if ($gpuMain) { $gpuMain.Name } else { $null }
+            DriverVersion  = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
+            DriverDate     = if ($gpuMain) { $gpuMain.DriverDate } else { $null }
+            VRAM_GB        = if ($gpuMain -and $gpuMain.AdapterRAM) { [math]::Round($gpuMain.AdapterRAM / 1GB, 2) } else { $null } 
+            Resolution     = if ($gpuMain -and $gpuMain.CurrentHorizontalResolution -and $gpuMain.CurrentVerticalResolution) {
                 '{0}x{1}' -f $gpuMain.CurrentHorizontalResolution, $gpuMain.CurrentVerticalResolution
             }
             elseif ($WF_PrimaryRes) {
@@ -802,7 +802,8 @@ function Get-SystemInventory {
             else {
                 $null
             }
-            RefreshRate   = if ($gpuMain) { "$($gpuMain.CurrentRefreshRate)Hz" } else { $null }
+            RefreshRate    = if ($gpuMain) { "$($gpuMain.CurrentRefreshRate)Hz" } else { $null }
+            MaxRefreshRate = if ($gpuMain) { "$($gpuMain.MaxRefreshRate)Hz" } else { $null }
         }
         Monitor        = [pscustomobject]@{
             Count           = ($monitors | Measure-Object).Count
