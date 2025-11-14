@@ -484,24 +484,17 @@ function createDetailsContent(machine) {
               </div>
                 <div class="detail-section">
                   <h4><i class="fas fa-tv"></i> Monitores</h4>
-                  ${(machine.Monitor?.Monitors?.length > 0)
-      ? machine.Monitor.Monitors.map(mon => `
-                        <div style="margin-left: 20px; margin-bottom: 12px;">
+                  ${(machine.Monitor?.Monitors?.length > 0) ? machine.Monitor.Monitors.map(mon => `
+                        <div style="margin-left: 20px; margin-bottom: 10px;">
                           <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'} ${mon.Primary ? '(Primário)' : ''}</p>
                           <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
                           <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
-                          <p><strong>Resolução:</strong> ${mon?.Resolution
-          ? mon.Resolution
-          : (mon?.WidthPx && mon?.HeightPx)
-            ? `${mon.WidthPx}x${mon.HeightPx}`
-            : (machine.GPU?.Resolution || 'N/A')
-        }</p>
+                          <p><strong>Resolução:</strong> ${mon?.Resolution ? mon.Resolution : (mon?.WidthPx && mon?.HeightPx) ? `${mon.WidthPx}x${mon.HeightPx}` : (machine.GPU?.Resolution || 'N/A')}</p>
                           <p><strong>Taxa de Atualização Atual:</strong> ${machine.GPU?.RefreshRate || 'N/A'}</p>
                           <p><strong>Taxa de Atualização Máxima Suportada: ${machine.GPU?.MaxRefreshRate || 'N/A'}</p>
+                          <br/>
                         </div>
-                      `).join('')
-      : '<p>N/A</p>'
-    }
+                      `).join('') : '<p>N/A</p>'}
                  </div>
               </div>`;
 
