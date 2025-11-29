@@ -302,7 +302,6 @@ function createMachineCard(machine) {
           </div>
           ` : ''}
         </div>
-        </div>
         <div class="card-footer">
           <span class="timestamp">${formattedDate}</span>
         </div>
@@ -1412,6 +1411,41 @@ function initEvents() {
   document.getElementById('search-input').addEventListener('input', filterMachines);
   document.getElementById('status-filter').addEventListener('change', filterMachines);
   document.getElementById('sort-by').addEventListener('change', filterMachines);
+
+  // Cliques nos cards de status do topo
+  const statusFilterSelect = document.getElementById('status-filter');
+
+  const statTotal = document.getElementById('stat-total');
+  if (statTotal) {
+    statTotal.addEventListener('click', () => {
+      if (statusFilterSelect) statusFilterSelect.value = 'all';
+      filterMachines(); // mostra todas as máquinas
+    });
+  }
+
+  const statOk = document.getElementById('stat-ok');
+  if (statOk) {
+    statOk.addEventListener('click', () => {
+      if (statusFilterSelect) statusFilterSelect.value = 'OK';
+      filterMachines(); // filtra só status OK
+    });
+  }
+
+  const statWarning = document.getElementById('stat-warning');
+  if (statWarning) {
+    statWarning.addEventListener('click', () => {
+      if (statusFilterSelect) statusFilterSelect.value = 'Atenção';
+      filterMachines(); // filtra só Atenção
+    });
+  }
+
+  const statCritical = document.getElementById('stat-critical');
+  if (statCritical) {
+    statCritical.addEventListener('click', () => {
+      if (statusFilterSelect) statusFilterSelect.value = 'Crítico';
+      filterMachines(); // filtra só Crítico
+    });
+  }
 
   // ✅ Novo: filtro por tipo de armazenamento
   const storageFilter = document.getElementById('storage-filter');
