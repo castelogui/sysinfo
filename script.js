@@ -1348,27 +1348,32 @@ function initEvents() {
     });
   });
 
-  // Fechar modal
+  // Fechar modal principal pelo "X"
   document.querySelector('.close-modal').addEventListener('click', () => {
     modal.style.display = 'none';
     document.body.style.overflow = 'auto';
   });
 
-  // Fechar modal clicando fora dele
+  // ✅ Fechar QUALQUER modal clicando fora dele
   window.addEventListener('click', (event) => {
-    if (event.target === modal) {
-      modal.style.display = 'none';
+    if (event.target.classList && event.target.classList.contains('modal')) {
+      event.target.style.display = 'none';
       document.body.style.overflow = 'auto';
     }
   });
 
-  // Fechar modal com ESC
+  // ✅ Fechar QUALQUER modal com ESC
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && modal.style.display === 'block') {
-      modal.style.display = 'none';
+    if (event.key === 'Escape') {
+      document.querySelectorAll('.modal').forEach(m => {
+        if (m.style.display === 'block') {
+          m.style.display = 'none';
+        }
+      });
       document.body.style.overflow = 'auto';
     }
   });
+
 
 
   // Tabs de detalhes
@@ -1426,6 +1431,13 @@ function exportCSV() {
 
 // Inicializar a aplicação
 document.addEventListener('DOMContentLoaded', () => {
+  // ✅ Focar automaticamente na barra de pesquisa
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.focus();
+    searchInput.select(); // opcional: já seleciona o texto, se houver
+  }
+
   fetchConfig().then((config) => {
     ambienteProducao = config.AMBIENTE_PRODUCAO ? config.AMBIENTE_PRODUCAO : false;
     initEvents();
