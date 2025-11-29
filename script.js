@@ -250,6 +250,11 @@ function createMachineCard(machine) {
             <div class="info-label"><i class="fas fa-desktop"></i> Computador</div>
             <div>${machine.Computer?.Manufacturer || 'N/A'} ${machine.Computer?.Family || 'N/A'}</div>
           </div>
+
+          <div class="info-item">
+            <div class="info-label"><i class="fas fa-user"></i> Usuário logado</div>
+            <div>${machine.Computer?.User || 'N/A'}</div>
+          </div>
           
           <div class="info-item">
             <div class="info-label"><i class="fas fa-microchip"></i> Processador</div>
