@@ -297,17 +297,14 @@ function createMachineCard(machine) {
           </div>
           ` : ''}
         </div>
+        </div>
         <div class="card-footer">
           <span class="timestamp">${formattedDate}</span>
-          <button class="btn btn-outline btn-sm view-details-btn" data-hostname="${machine.Hostname}">
-            <i class="fas fa-info-circle"></i> Detalhes
-          </button>
         </div>
       `;
 
-  // Adicionar evento ao botão de detalhes
-  const detailsBtn = card.querySelector('.view-details-btn');
-  detailsBtn.addEventListener('click', () => {
+  // Ao clicar em qualquer lugar do card, abrir o modal de detalhes
+  card.addEventListener('click', () => {
     showMachineDetails(machine);
   });
 
@@ -951,6 +948,29 @@ function updateStatusChart() {
     data: data,
     options: {
       responsive: true,
+
+      // ✅ NOVO: clique no gráfico filtra por status
+      onClick: (evt, elements, chart) => {
+        const statusSelect = document.getElementById('status-filter');
+        if (!statusSelect) return;
+
+        // Se clicou em área vazia do gráfico → reseta filtro
+        if (!elements || elements.length === 0) {
+          statusSelect.value = 'all';
+          filterMachines();
+          return;
+        }
+
+        const firstElement = elements[0];
+        const index = firstElement.index;
+        const label = chart.data.labels[index]; // 'OK', 'Atenção', 'Crítico'
+
+        if (label === 'OK' || label === 'Atenção' || label === 'Crítico') {
+          statusSelect.value = label;
+          filterMachines(); // switchView('machines') já é chamado dentro de filterMachines()
+        }
+      },
+
       plugins: {
         legend: {
           position: 'top',
@@ -1144,19 +1164,42 @@ function machineMatchesSearch(machine, rawQuery) {
   return tokens.every(t => hay.includes(t));
 }
 
+// Verifica se a máquina possui pelo menos um disco HDD
+function machineHasHdd(machine) {
+  const disks = machine?.Storage?.Disks;
+  if (!Array.isArray(disks)) return false;
+
+  return disks.some(disk => {
+    const type = (disk.Type || '').toString().toLowerCase();
+    // Inventário costuma vir como "HDD", "SSD", etc.
+    return type.includes('hdd');
+  });
+}
+
 // Função para filtrar máquinas
 function filterMachines() {
+  // Sempre que filtrar, vai para a view de máquinas
   switchView('machines');
-  const searchText = document.getElementById('search-input').value.toLowerCase();
+
+  const searchText = document.getElementById('search-input').value;
   const statusFilter = document.getElementById('status-filter').value;
   const sortBy = document.getElementById('sort-by').value;
+
+  // ✅ Novo: filtro por tipo de armazenamento (HDD)
+  const storageFilterEl = document.getElementById('storage-filter');
+  const storageFilter = storageFilterEl ? storageFilterEl.value : 'all';
 
   let filtered = allMachines.filter(machine => {
     const matchesSearch = machineMatchesSearch(machine, searchText);
 
-    const matchesStatus = statusFilter === 'all' || machine.Status === statusFilter;
+    const matchesStatus =
+      statusFilter === 'all' || machine.Status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesStorage =
+      storageFilter === 'all' ||
+      (storageFilter === 'hdd' && machineHasHdd(machine));
+
+    return matchesSearch && matchesStatus && matchesStorage;
   });
 
   // Ordenar resultados
@@ -1168,6 +1211,7 @@ function filterMachines() {
     } else if (sortBy === 'timestamp') {
       return new Date(b.TimestampUtc) - new Date(a.TimestampUtc);
     } else if (sortBy === 'ram_total_asc') {
+      // RAM total (GB) crescente
       const toNum = (v) => {
         const n = (typeof v === 'number') ? v : parseFloat(v);
         return Number.isFinite(n) ? n : Infinity; // sem valor vai pro fim
@@ -1175,13 +1219,25 @@ function filterMachines() {
       const aRam = toNum(a?.RAM?.TotalGB);
       const bRam = toNum(b?.RAM?.TotalGB);
       return aRam - bRam; // crescente
+    } else if (sortBy === 'ram_free_asc') {
+      // RAM livre (GB) crescente: menor primeiro
+      const toNum = (v) => {
+        const n = (typeof v === 'number') ? v : parseFloat(v);
+        // Sem valor vai para o final (Infinity em ordem crescente)
+        return Number.isFinite(n) ? n : Infinity;
+      };
+      const aFree = toNum(a?.RAM?.FreeGB);
+      const bFree = toNum(b?.RAM?.FreeGB);
+      return aFree - bFree; // crescente: menor RAM livre primeiro
     }
+
+
     return 0;
   });
 
-
   renderMachines(filtered);
 }
+
 
 // Função auxiliar para formatar datas
 function formatDate(dateString) {
@@ -1313,12 +1369,51 @@ function initEvents() {
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
   // Botão de atualizar
-  document.getElementById('refresh-btn').addEventListener('click', loadMachinesData);
+  // Botão de atualizar
+  const refreshBtn = document.getElementById('refresh-btn');
+  const refreshIcon = refreshBtn.querySelector('i');
+
+  refreshBtn.addEventListener('click', async () => {
+    try {
+      // feedback visual
+      refreshBtn.disabled = true;
+      if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+      // Recarrega manifesto + todos os .json das máquinas (com anti-cache)
+      await loadMachinesData();
+
+      // Reaplica a view atual com base nos novos dados
+      if (currentView === 'machines') {
+        // reaplica filtros atuais (busca, status, etc.)
+        filterMachines();
+      } else if (currentView === 'alerts') {
+        // lista de alertas baseada em allAlerts atualizado
+        renderAlertsPanel();
+      } else if (currentView === 'dashboard') {
+        // garantimos que tudo da dashboard está atualizado
+        updateStats();
+        updateResourcesChart();
+        updateStatusChart();
+        updateAlertsChart();
+        updateAlertsPanel();
+      }
+    } finally {
+      refreshBtn.disabled = false;
+      if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+    }
+  });
 
   // Filtros
   document.getElementById('search-input').addEventListener('input', filterMachines);
   document.getElementById('status-filter').addEventListener('change', filterMachines);
   document.getElementById('sort-by').addEventListener('change', filterMachines);
+
+  // ✅ Novo: filtro por tipo de armazenamento
+  const storageFilter = document.getElementById('storage-filter');
+  if (storageFilter) {
+    storageFilter.addEventListener('change', filterMachines);
+  }
+
 
   // Botões de visualização
   document.getElementById('view-dashboard').addEventListener('click', () => switchView('dashboard'));

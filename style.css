@@ -290,6 +290,7 @@ header {
   transition: var(--transition);
   display: flex;
   flex-direction: column;
+  cursor: pointer; /* agora parece “clicável” */
 }
 
 .machine-card:hover {

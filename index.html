@@ -44,18 +44,31 @@
           <i class="fas fa-search"></i>
           <input type="text" id="search-input" placeholder="Pesquisar máquinas...">
         </div>
+
+        <!-- Filtro por status -->
         <select id="status-filter" class="filter-select">
           <option value="all">Todos os status</option>
           <option value="OK">OK</option>
           <option value="Atenção">Atenção</option>
           <option value="Crítico">Crítico</option>
         </select>
+
+        <!-- ✅ NOVO: Filtro por tipo de disco -->
+        <select id="storage-filter" class="filter-select">
+          <option value="all">Todos os tipos de disco</option>
+          <option value="hdd">Apenas HDD</option>
+        </select>
+
+        <!-- Ordenação -->
         <select id="sort-by" class="filter-select">
           <option value="hostname">Ordenar por: Nome</option>
           <option value="status">Ordenar por: Status</option>
           <option value="timestamp">Ordenar por: Data</option>
           <option value="ram_total_asc">Ordenar por: RAM (total ↑)</option>
+          <!-- ✅ NOVO: RAM livre decrescente -->
+          <option value="ram_free_asc">Ordenar por: RAM livre (↑)</option>
         </select>
+
         <select id="time-range" class="filter-select" style="display: none;">
           <option value="1">Últimas 24 horas</option>
           <option value="7">Última semana</option>
@@ -63,6 +76,7 @@
           <option value="90">Últimos 3 meses</option>
         </select>
       </div>
+
       <div class="view-toggle">
         <button class="view-btn active" id="view-dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
         <button class="view-btn" id="view-machines"><i class="fas fa-server"></i> Máquinas</button>
