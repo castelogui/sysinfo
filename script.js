@@ -1372,7 +1372,16 @@ function initEvents() {
   // Botão de tema
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
-  // Botão de atualizar
+  // ✅ Logo "Central de Análise de TI" volta para a página principal (Dashboard)
+  const homeLogo = document.getElementById('home-logo');
+  if (homeLogo) {
+    homeLogo.addEventListener('click', () => {
+      switchView('dashboard');
+      // opcional: rolar para o topo
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   // Botão de atualizar
   const refreshBtn = document.getElementById('refresh-btn');
   const refreshIcon = refreshBtn.querySelector('i');

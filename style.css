@@ -55,6 +55,21 @@ header {
   transition: var(--transition);
 }
 
+/* Logo clicável (voltar para página principal) */
+#home-logo {
+  cursor: pointer;
+}
+
+#home-logo h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#home-logo:hover h1 {
+  opacity: 0.9;
+}
+
 .header-left h1 {
   font-size: 1.8rem;
   margin-bottom: 5px;
@@ -196,15 +211,15 @@ header {
   color: var(--accent-primary);
 }
 
-#stat-ok i{
+#stat-ok i {
   color: var(--success);
 }
 
-#stat-warning i{
+#stat-warning i {
   color: var(--warning);
 }
 
-#stat-critical i{
+#stat-critical i {
   color: var(--danger);
 }
 
@@ -290,7 +305,8 @@ header {
   transition: var(--transition);
   display: flex;
   flex-direction: column;
-  cursor: pointer; /* agora parece “clicável” */
+  cursor: pointer;
+  /* agora parece “clicável” */
 }
 
 .machine-card:hover {
