@@ -1,5 +1,5 @@
 ﻿# <#
-#  GPO-COMPLETE-SYSINFO.ps1
+#  GPO-AQS-COMPLETE-SYSINFO.ps1
 #  - Coleta inventário local avançado
 #  - Suporte a múltiplos modos de coleta e armazenamento
 #  - Persistência histórica e alertas avançados
@@ -7,7 +7,7 @@
 #>
 
 param(
-    [string]$RepoRoot = ".",
+    [string]$RepoRoot = "\\192.168.16.3\brasilsuperatacado\sysinfo",
     [ValidateSet("Completo", "Minimo")]
     [string]$ModoColeta = "Completo",
     [int]$IntervaloExecucao = 0,
@@ -38,7 +38,16 @@ $computer = $env:COMPUTERNAME
 # Forçar execução completa (opções desativadas)
 $ModoColeta = "Completo"
 
-$scriptVersion = "2.3"
+$scriptVersion = "2.4"
+
+# Caminho da pasta do script (inclui UNC) e da DLL do LibreHardwareMonitor
+try {
+    $script:ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+}
+catch {
+    $script:ScriptRoot = "."
+}
+$script:LibreHW_DefaultPath = Join-Path -Path $script:ScriptRoot -ChildPath "LibreHardwareMonitorLib.dll"
 
 # ----------------- Helpers melhorados -----------------
 function Write-Log {
@@ -50,15 +59,15 @@ function Write-Log {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
     switch ($Level) {
-        "ERROR"   { Write-Error   $logEntry }
+        "ERROR" { Write-Error   $logEntry }
         "WARNING" { Write-Warning $logEntry }
-        default   { Write-Host    $logEntry }
+        default { Write-Host    $logEntry }
     }
 }
 
 function Test-Admin {
     try {
-        $identity  = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object Security.Principal.WindowsPrincipal($identity)
         return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     }
@@ -182,7 +191,7 @@ function Get-SeverityWeight([string]$s) {
     switch ($s) {
         "Crítico" { 2 }
         "Atenção" { 1 }
-        default   { 0 }
+        default { 0 }
     }
 }
 
@@ -201,15 +210,374 @@ function ConvertTo-JsonForceArray {
     return ConvertTo-Json -InputObject $arr -Depth $Depth
 }
 
+function Format-TempDisplay {
+    param(
+        [Parameter(Mandatory = $false)]
+        $Value
+    )
+    if ($null -eq $Value) {
+        return "N/A"
+    }
+    return ('{0:N1} °C' -f [double]$Value)
+}
+
+function Ensure-DisplayHelper {
+    if ('DisplayHelper' -as [type]) { return }
+
+    $displayHelperCode = @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class DisplayHelper
+{
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    public struct DEVMODE
+    {
+        private const int CCHDEVICENAME = 32;
+        private const int CCHFORMNAME = 32;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = CCHDEVICENAME)]
+        public string dmDeviceName;
+        public ushort dmSpecVersion;
+        public ushort dmDriverVersion;
+        public ushort dmSize;
+        public ushort dmDriverExtra;
+        public uint dmFields;
+        public int dmPositionX;
+        public int dmPositionY;
+        public uint dmDisplayOrientation;
+        public uint dmDisplayFixedOutput;
+        public short dmColor;
+        public short dmDuplex;
+        public short dmYResolution;
+        public short dmTTOption;
+        public short dmCollate;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = CCHFORMNAME)]
+        public string dmFormName;
+        public ushort dmLogPixels;
+        public uint dmBitsPerPel;
+        public uint dmPelsWidth;
+        public uint dmPelsHeight;
+        public uint dmDisplayFlags;
+        public uint dmDisplayFrequency;
+        public uint dmICMMethod;
+        public uint dmICMIntent;
+        public uint dmMediaType;
+        public uint dmDitherType;
+        public uint dmReserved1;
+        public uint dmReserved2;
+        public uint dmPanningWidth;
+        public uint dmPanningHeight;
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern bool EnumDisplaySettings(
+        string deviceName, int modeNum, ref DEVMODE devMode);
+
+    public static int GetCurrentRefreshRate(string deviceName)
+    {
+        DEVMODE dm = new DEVMODE();
+        dm.dmSize = (ushort)Marshal.SizeOf(typeof(DEVMODE));
+        // -1 = ENUM_CURRENT_SETTINGS
+        if (EnumDisplaySettings(deviceName, -1, ref dm))
+        {
+            return (int)dm.dmDisplayFrequency;
+        }
+        return 0;
+    }
+
+    public static int GetMaxRefreshRate(string deviceName, int width, int height)
+    {
+        DEVMODE dm = new DEVMODE();
+        dm.dmSize = (ushort)Marshal.SizeOf(typeof(DEVMODE));
+        int modeNum = 0;
+        int maxFreq = 0;
+
+        while (EnumDisplaySettings(deviceName, modeNum, ref dm))
+        {
+            if (dm.dmPelsWidth == (uint)width && dm.dmPelsHeight == (uint)height)
+            {
+                if (dm.dmDisplayFrequency > maxFreq)
+                {
+                    maxFreq = (int)dm.dmDisplayFrequency;
+                }
+            }
+            modeNum++;
+        }
+        return maxFreq;
+    }
+}
+'@
+
+    Add-Type -TypeDefinition $displayHelperCode -ErrorAction Stop
+}
+
+# ----------------- Integração LibreHardwareMonitor -----------------
+function Initialize-LibreHardwareMonitor {
+    param(
+        [string]$DllPath
+    )
+
+    if (-not $DllPath -or [string]::IsNullOrWhiteSpace($DllPath)) {
+        $DllPath = $script:LibreHW_DefaultPath
+    }
+
+    $dllDir = Split-Path -Parent $DllPath
+    $hidPath = Join-Path -Path $dllDir -ChildPath "HidSharp.dll"
+
+    if (-not ("HidSharp.HidDevice" -as [type])) {
+        if (Test-Path -LiteralPath $hidPath) {
+            try {
+                $hidBytes = [System.IO.File]::ReadAllBytes($hidPath)
+                [System.Reflection.Assembly]::Load($hidBytes) | Out-Null
+                Write-Log ("HidSharp.dll carregada a partir de {0}" -f $hidPath) "INFO"
+            }
+            catch {
+                Write-Log ("Falha ao carregar HidSharp.dll a partir de {0}: {1}" -f $hidPath, $_.Exception.Message) "WARNING"
+            }
+        }
+        else {
+            Write-Log ("HidSharp.dll não encontrada em {0}. Algumas leituras de sensores podem falhar." -f $hidPath) "WARNING"
+        }
+    }
+
+    if ("LibreHardwareMonitor.Hardware.Computer" -as [type]) {
+        return $true
+    }
+
+    if (-not (Test-Path -LiteralPath $DllPath)) {
+        Write-Log "DLL LibreHardwareMonitor não encontrada em: $DllPath" "WARNING"
+        return $false
+    }
+
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($DllPath)
+        [System.Reflection.Assembly]::Load($bytes) | Out-Null
+        Write-Log "LibreHardwareMonitorLib.dll carregada com sucesso a partir de $DllPath." "INFO"
+        return $true
+    }
+    catch {
+        Write-Log ("Falha ao carregar LibreHardwareMonitorLib.dll a partir de {0}: {1}" -f $DllPath, $_.Exception.Message) "ERROR"
+        return $false
+    }
+}
+
+function Get-LHMTemperatures {
+    param(
+        [string]$DllPath
+    )
+
+    if (-not (Initialize-LibreHardwareMonitor -DllPath $DllPath)) {
+        return [pscustomobject]@{
+            CPU       = @{ ValueC = $null; Display = "N/A" }
+            GPU       = @{ ValueC = $null; Display = "N/A" }
+            RAM       = @{ ValueC = $null; Display = "N/A" }
+            Storage   = @{ ValueC = $null; Display = "N/A" }
+            Mainboard = @{ ValueC = $null; Display = "N/A" }
+            Chipset   = @{ ValueC = $null; Display = "N/A" }
+            Sensors   = @()
+        }
+    }
+
+    $computer = $null
+
+    try {
+        $computer = New-Object LibreHardwareMonitor.Hardware.Computer
+        $computer.IsCpuEnabled = $true
+        $computer.IsGpuEnabled = $true
+        $computer.IsMemoryEnabled = $true
+        $computer.IsStorageEnabled = $true
+        $computer.IsMotherboardEnabled = $true
+        $computer.Open()
+
+        $allSensors = @()
+
+        foreach ($hw in $computer.Hardware) {
+            $hw.Update()
+            foreach ($sub in $hw.SubHardware) { $sub.Update() }
+
+            foreach ($sensor in $hw.Sensors) {
+                if ($sensor.SensorType -eq [LibreHardwareMonitor.Hardware.SensorType]::Temperature) {
+                    $allSensors += [pscustomobject]@{
+                        HardwareName = $hw.Name
+                        HardwareType = $hw.HardwareType.ToString()
+                        SensorName   = $sensor.Name
+                        SensorId     = $sensor.Identifier.ToString()
+                        ValueC       = if ($sensor.Value -ne $null) { [math]::Round([double]$sensor.Value, 1) } else { $null }
+                        MinC         = if ($sensor.Min -ne $null) { [math]::Round([double]$sensor.Min, 1) } else { $null }
+                        MaxC         = if ($sensor.Max -ne $null) { [math]::Round([double]$sensor.Max, 1) } else { $null }
+                    }
+                }
+            }
+        }
+
+        function Get-BestSensor {
+            param(
+                [array]$Candidates,
+                [string[]]$NamePriority
+            )
+
+            if (-not $Candidates -or $Candidates.Count -eq 0) { return $null }
+
+            if ($NamePriority -and $NamePriority.Count -gt 0) {
+                foreach ($pat in $NamePriority) {
+                    $hit = $Candidates | Where-Object { $_.SensorName -like $pat } | Select-Object -First 1
+                    if ($hit) { return $hit }
+                }
+            }
+
+            $valid = $Candidates | Where-Object { $_.ValueC -ne $null }
+            if ($valid.Count -gt 0) {
+                $avg = [math]::Round((($valid | Measure-Object ValueC -Average).Average), 1)
+                $minV = ($valid | Measure-Object ValueC -Minimum).Minimum
+                $maxV = ($valid | Measure-Object ValueC -Maximum).Maximum
+                $first = $valid | Select-Object -First 1
+
+                return [pscustomobject]@{
+                    HardwareName = $first.HardwareName
+                    HardwareType = $first.HardwareType
+                    SensorName   = "Média"
+                    SensorId     = $first.SensorId
+                    ValueC       = $avg
+                    MinC         = $minV
+                    MaxC         = $maxV
+                }
+            }
+
+            return $Candidates | Select-Object -First 1
+        }
+
+        $cpuList = $allSensors | Where-Object { $_.HardwareType -eq "Cpu" }
+        $gpuList = $allSensors | Where-Object { $_.HardwareType -like "Gpu*" }
+        $ramList = $allSensors | Where-Object { $_.HardwareType -eq "Memory" }
+        $storList = $allSensors | Where-Object { $_.HardwareType -eq "Storage" }
+        $boardList = $allSensors | Where-Object { $_.HardwareType -in @("Motherboard", "Mainboard") }
+        $chipList = $allSensors | Where-Object {
+            $_.HardwareType -eq "SuperIO" -or
+            $_.SensorName -like "*PCH*" -or
+            $_.SensorName -like "*Chipset*"
+        }
+
+        $bestCpu = Get-BestSensor -Candidates $cpuList   -NamePriority @("CPU Package", "Core Max", "Core Average")
+        $bestGpu = Get-BestSensor -Candidates $gpuList   -NamePriority @("GPU Core", "GPU Temperature*", "GPU Hot Spot*")
+        $bestRam = Get-BestSensor -Candidates $ramList   -NamePriority @("Memory*", "RAM*")
+        $bestStor = Get-BestSensor -Candidates $storList  -NamePriority @("Temperature", "Temperature 1", "Drive Temperature*")
+        $bestBoard = Get-BestSensor -Candidates $boardList -NamePriority @("System*", "Motherboard*", "Mainboard*")
+        $bestChip = Get-BestSensor -Candidates $chipList  -NamePriority @("*PCH*", "*Chipset*")
+
+        function Make-Summary {
+            param([object]$Sensor)
+
+            if ($null -eq $Sensor -or $null -eq $Sensor.ValueC) {
+                return @{
+                    ValueC  = $null
+                    Display = "N/A"
+                }
+            }
+
+            $val = [math]::Round([double]$Sensor.ValueC, 1)
+            return @{
+                ValueC  = $val
+                Display = ("{0:0.0} °C" -f $val)
+            }
+        }
+
+        $summarySensors = @()
+        foreach ($s in @($bestCpu, $bestGpu, $bestRam, $bestStor, $bestBoard, $bestChip)) {
+            if ($s -and $s.ValueC -ne $null) {
+                $summarySensors += $s
+            }
+        }
+
+        return [pscustomobject]@{
+            CPU       = (Make-Summary $bestCpu)
+            GPU       = (Make-Summary $bestGpu)
+            RAM       = (Make-Summary $bestRam)
+            Storage   = (Make-Summary $bestStor)
+            Mainboard = (Make-Summary $bestBoard)
+            Chipset   = (Make-Summary $bestChip)
+            Sensors   = @($summarySensors)
+        }
+    }
+    catch {
+        Write-Log "Falha ao abrir LibreHardwareMonitor: $($_.Exception.Message)" "WARNING"
+
+        return [pscustomobject]@{
+            CPU       = @{ ValueC = $null; Display = "N/A" }
+            GPU       = @{ ValueC = $null; Display = "N/A" }
+            RAM       = @{ ValueC = $null; Display = "N/A" }
+            Storage   = @{ ValueC = $null; Display = "N/A" }
+            Mainboard = @{ ValueC = $null; Display = "N/A" }
+            Chipset   = @{ ValueC = $null; Display = "N/A" }
+            Sensors   = @()
+        }
+    }
+    finally {
+        if ($computer) {
+            $computer.Close()
+        }
+    }
+}
+
+function Get-BestLHMTempValue {
+    param(
+        [object[]]$Sensors,
+        [string[]]$PreferredPatterns
+    )
+
+    if (-not $Sensors -or $Sensors.Count -eq 0) { return $null }
+
+    $valid = $Sensors | Where-Object { $_.ValueC -ne $null }
+    if (-not $valid -or $valid.Count -eq 0) { return $null }
+
+    if ($PreferredPatterns -and $PreferredPatterns.Count -gt 0) {
+        foreach ($pattern in $PreferredPatterns) {
+            $candidate = $valid | Where-Object { $_.SensorName -match $pattern } | Select-Object -First 1
+            if ($candidate) { return $candidate.ValueC }
+        }
+    }
+
+    return ($valid | Measure-Object ValueC -Maximum).Maximum
+}
+
+function Get-LHMCategoryTemperatures {
+    param(
+        [string]$DllPath
+    )
+
+    $summary = Get-LHMTemperatures -DllPath $DllPath
+
+    if (-not $summary) {
+        return [pscustomobject]@{
+            CPU       = $null
+            GPU       = $null
+            RAM       = $null
+            Storage   = $null
+            Mainboard = $null
+            Chipset   = $null
+            Sensors   = @()
+        }
+    }
+
+    return [pscustomobject]@{
+        CPU       = if ($summary.CPU       -and $summary.CPU.ValueC       -ne $null) { [double]$summary.CPU.ValueC }       else { $null }
+        GPU       = if ($summary.GPU       -and $summary.GPU.ValueC       -ne $null) { [double]$summary.GPU.ValueC }       else { $null }
+        RAM       = if ($summary.RAM       -and $summary.RAM.ValueC       -ne $null) { [double]$summary.RAM.ValueC }       else { $null }
+        Storage   = if ($summary.Storage   -and $summary.Storage.ValueC   -ne $null) { [double]$summary.Storage.ValueC }   else { $null }
+        Mainboard = if ($summary.Mainboard -and $summary.Mainboard.ValueC -ne $null) { [double]$summary.Mainboard.ValueC } else { $null }
+        Chipset   = if ($summary.Chipset   -and $summary.Chipset.ValueC   -ne $null) { [double]$summary.Chipset.ValueC }   else { $null }
+        Sensors   = @($summary.Sensors)
+    }
+}
+
 # ----------------- Coleta de Dados Avançada -----------------
 function Get-ProcessInfo {
     Write-Log "Coletando informações de processos"
 
     try {
         $processes = Get-Process |
-            Where-Object { $_.CPU -or $_.WorkingSet } |
-            Sort-Object CPU -Descending |
-            Select-Object -First 15
+        Where-Object { $_.CPU -or $_.WorkingSet } |
+        Sort-Object CPU -Descending |
+        Select-Object -First 15
 
         $processInfo = @()
         foreach ($proc in $processes) {
@@ -240,7 +608,7 @@ function Get-ServiceInfo {
     try {
         $criticalServices = @("WinRM", "Spooler", "EventLog", "LanmanServer", "LanmanWorkstation", "DHCP", "DNS")
         $services = Get-Service -Name $criticalServices -ErrorAction SilentlyContinue |
-                    Where-Object { $_.Name -in $criticalServices }
+        Where-Object { $_.Name -in $criticalServices }
 
         $serviceInfo = @()
         foreach ($svc in $services) {
@@ -270,7 +638,6 @@ function Get-SoftwareInfo {
     try {
         $software = @()
 
-        # Software instalado via Uninstall registry keys
         $uninstallPaths = @(
             "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
             "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
@@ -278,7 +645,7 @@ function Get-SoftwareInfo {
 
         foreach ($path in $uninstallPaths) {
             $items = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
-                     Where-Object { $_.DisplayName }
+            Where-Object { $_.DisplayName }
 
             foreach ($item in $items) {
                 $sizeMb = $null
@@ -299,8 +666,8 @@ function Get-SoftwareInfo {
         }
 
         return $software |
-            Sort-Object SizeMB -Descending |
-            Select-Object -First 20
+        Sort-Object SizeMB -Descending |
+        Select-Object -First 20
     }
     catch {
         Write-Log "Erro ao coletar informações de software: $($_.Exception.Message)" "WARNING"
@@ -315,10 +682,9 @@ function Get-EventLogInfo {
         $eventLogs = @()
         $startTime = (Get-Date).AddHours(-24)
 
-        # Eventos críticos e de erro das últimas 24h
         $events = Get-WinEvent -FilterHashtable @{
             LogName   = 'Application', 'System'
-            Level     = 1, 2  # 1=Critical, 2=Error
+            Level     = 1, 2
             StartTime = $startTime
         } -MaxEvents 50 -ErrorAction SilentlyContinue
 
@@ -355,7 +721,6 @@ function Get-SecurityInfo {
             Firewall  = @()
         }
 
-        # Informações do antivírus via WMI
         $antivirus = Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct -ErrorAction SilentlyContinue
         if ($antivirus) {
             foreach ($av in $antivirus) {
@@ -368,7 +733,6 @@ function Get-SecurityInfo {
             }
         }
 
-        # Status do firewall
         $firewall = Get-NetFirewallProfile -PolicyStore ActiveStore -ErrorAction SilentlyContinue
         if ($firewall) {
             foreach ($fw in $firewall) {
@@ -393,53 +757,43 @@ function Get-SecurityInfo {
 function Get-SystemInventory {
     Write-Log "Iniciando coleta de inventário (Modo: $ModoColeta)"
 
-    # Dados básicos (sempre coletados)
-    $cs   = Try-Get { Get-CimInstance Win32_ComputerSystem }      "Falha ao coletar informações do sistema"
-    $os   = Try-Get { Get-CimInstance Win32_OperatingSystem }     "Falha ao coletar informações do OS"
+    $cs = Try-Get { Get-CimInstance Win32_ComputerSystem }      "Falha ao coletar informações do sistema"
+    $os = Try-Get { Get-CimInstance Win32_OperatingSystem }     "Falha ao coletar informações do OS"
     $bios = Try-Get { Get-CimInstance Win32_BIOS }                "Falha ao coletar informações da BIOS"
-    $bb   = Try-Get { Get-CimInstance Win32_BaseBoard }           "Falha ao coletar informações da placa-mãe"
-    $cpu  = Try-Get { Get-CimInstance Win32_Processor }           "Falha ao coletar informações da CPU"
-    $ram  = Try-Get { Get-CimInstance Win32_PhysicalMemory }      "Falha ao coletar informações da RAM"
-    $gpu  = Try-Get { Get-CimInstance Win32_VideoController }     "Falha ao coletar informações da GPU"
+    $bb = Try-Get { Get-CimInstance Win32_BaseBoard }           "Falha ao coletar informações da placa-mãe"
+    $cpu = Try-Get { Get-CimInstance Win32_Processor }           "Falha ao coletar informações da CPU"
+    $ram = Try-Get { Get-CimInstance Win32_PhysicalMemory }      "Falha ao coletar informações da RAM"
+    $gpu = Try-Get { Get-CimInstance Win32_VideoController }     "Falha ao coletar informações da GPU"
 
-    # === WinForms: resolução por monitor (fallback) ===
-    $WF_AllScreens = @()
-    $WF_PrimaryRes = $null
-    try {
-        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
-        $wfScreens = [System.Windows.Forms.Screen]::AllScreens
-        $wfPrimary = $wfScreens | Where-Object { $_.Primary } | Select-Object -First 1
+    # GPU principal (reutilizada para resolução/Hz e resumo)
+    $gpuMain = $null
+    $gpuResolutionStr = $null
+    $gpuCurrentHz = $null
+    $gpuMaxHz = $null
 
-        $WF_AllScreens = @(
-            for ($i = 0; $i -lt $wfScreens.Count; $i++) {
-                [pscustomobject]@{
-                    Index      = $i
-                    Primary    = $wfScreens[$i].Primary
-                    WidthPx    = $wfScreens[$i].Bounds.Width
-                    HeightPx   = $wfScreens[$i].Bounds.Height
-                    DeviceName = $wfScreens[$i].DeviceName
-                }
-            }
-        )
+    if ($gpu) {
+        $gpuMain = $gpu | Select-Object -First 1
 
-        if ($wfPrimary) {
-            $WF_PrimaryRes = '{0}x{1}' -f $wfPrimary.Bounds.Width, $wfPrimary.Bounds.Height
+        if ($gpuMain.CurrentHorizontalResolution -and $gpuMain.CurrentVerticalResolution) {
+            $gpuResolutionStr = '{0}x{1}' -f $gpuMain.CurrentHorizontalResolution, $gpuMain.CurrentVerticalResolution
+        }
+
+        if ($gpuMain.CurrentRefreshRate) {
+            $gpuCurrentHz = [int]$gpuMain.CurrentRefreshRate
+        }
+        if ($gpuMain.MaxRefreshRate) {
+            $gpuMaxHz = [int]$gpuMain.MaxRefreshRate
         }
     }
-    catch {
-        $WF_AllScreens = @()
-        $WF_PrimaryRes = $null
-    }
-    # ================================================
 
-    # Coleta condicional baseada no modo
-    $processInfo  = if ($ModoColeta -ne "Minimo")   { Get-ProcessInfo }  else { @() }
-    $serviceInfo  = if ($ModoColeta -ne "Minimo")   { Get-ServiceInfo }  else { @() }
+    # Coletas condicionais
+    $processInfo = if ($ModoColeta -ne "Minimo") { Get-ProcessInfo }  else { @() }
+    $serviceInfo = if ($ModoColeta -ne "Minimo") { Get-ServiceInfo }  else { @() }
     $softwareInfo = if ($ModoColeta -eq "Completo") { Get-SoftwareInfo } else { @() }
     $eventLogInfo = if ($ModoColeta -eq "Completo") { Get-EventLogInfo } else { @() }
     $securityInfo = if ($ModoColeta -eq "Completo") { Get-SecurityInfo } else { @{} }
 
-    # Dados de storage (sempre coletados)
+    # Storage
     $vol = Try-Get { Get-Volume -ErrorAction Stop } "Falha ao coletar informações de volume"
     if (-not $vol) {
         $vol = Try-Get {
@@ -465,13 +819,13 @@ function Get-SystemInventory {
         $discos = $pd | ForEach-Object {
             $bus = [string]$_.BusType
             $med = [string]$_.MediaType
-            $sp  = $_.SpindleSpeed
+            $sp = $_.SpindleSpeed
             $type = if ($bus -match 'NVMe') { 'NVMe' }
-                    elseif ($med -match 'SSD') { 'SSD' }
-                    elseif ($med -match 'HDD') { 'HDD' }
-                    elseif ($sp -ge 1)        { 'HDD' }
-                    elseif ($sp -eq 0)        { 'SSD' }
-                    else                      { $null }
+            elseif ($med -match 'SSD') { 'SSD' }
+            elseif ($med -match 'HDD') { 'HDD' }
+            elseif ($sp -ge 1) { 'HDD' }
+            elseif ($sp -eq 0) { 'SSD' }
+            else { $null }
             [pscustomobject]@{
                 Model    = $_.FriendlyName
                 Serial   = $_.SerialNumber
@@ -487,15 +841,15 @@ function Get-SystemInventory {
     }
     elseif ($dd) {
         $discos = $dd | ForEach-Object {
-            $bus   = [string]$_.InterfaceType
+            $bus = [string]$_.InterfaceType
             $model = [string]$_.Model
             $meddd = $null
             if ($_.PSObject.Properties.Name -contains 'MediaType') {
                 $meddd = [string]$_.MediaType
             }
             $type = if ($bus -match 'NVME' -or $model -match 'NVME') { 'NVMe' }
-                    elseif ($model -match 'SSD' -or $meddd -match 'Solid|SSD' -or $model -match 'M\.?2') { 'SSD' }
-                    else { $null }
+            elseif ($model -match 'SSD' -or $meddd -match 'Solid|SSD' -or $model -match 'M\.?2') { 'SSD' }
+            else { $null }
             [pscustomobject]@{
                 Model    = $model
                 Serial   = $_.SerialNumber
@@ -510,7 +864,6 @@ function Get-SystemInventory {
         }
     }
 
-    # Volumes simples baseados em $vol
     $volumes = @()
     if ($vol) {
         foreach ($v in $vol) {
@@ -520,9 +873,9 @@ function Get-SystemInventory {
             $sizeGB = [math]::Round($sz / 1GB, 2)
 
             $driveLetter = $null
-            $label       = $null
-            $fs          = $null
-            $health      = $null
+            $label = $null
+            $fs = $null
+            $health = $null
 
             if ($v.PSObject.Properties.Name -contains 'DriveLetter') {
                 if ($v.DriveLetter) {
@@ -548,8 +901,6 @@ function Get-SystemInventory {
                 $health = $v.HealthStatus
             }
 
-            # Ignora partições de sistema/recuperação/boot:
-            # critério: sem letra e tamanho < 10 GB
             $hasLetter = -not [string]::IsNullOrWhiteSpace($driveLetter)
             if (-not $hasLetter -and $sizeGB -lt 10) {
                 continue
@@ -593,14 +944,15 @@ function Get-SystemInventory {
         )
     }
 
-    # Monitores (EDID)
+    # Monitores (EDID + Hz por tela + primário)
     $monitors = @()
+    $screenInfo = @()
+
     try {
-        $ids   = Try-Get { Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorID }                  "Falha ao coletar informações de monitor"
+        $ids = Try-Get { Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorID }                  "Falha ao coletar informações de monitor"
         $basic = Try-Get { Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams } "Falha ao coletar parâmetros básicos de monitor"
 
         if ($ids) {
-            # helper para decodificar arrays UInt16 -> string
             $decode = {
                 param([uint16[]]$u16)
                 if (-not $u16) { return $null }
@@ -608,7 +960,6 @@ function Get-SystemInventory {
             }
 
             foreach ($m in @($ids | ForEach-Object { $_ })) {
-                # filtra ativos quando a prop existir
                 if ($m.PSObject.Properties.Name -contains 'Active') {
                     if (-not $m.Active) { continue }
                 }
@@ -618,8 +969,8 @@ function Get-SystemInventory {
                 $w = 0.0
                 $h = 0.0
                 if ($b) {
-                    $w = [double]$b.MaxHorizontalImageSize  # cm
-                    $h = [double]$b.MaxVerticalImageSize    # cm
+                    $w = [double]$b.MaxHorizontalImageSize
+                    $h = [double]$b.MaxVerticalImageSize
                 }
 
                 $diag = $null
@@ -639,7 +990,7 @@ function Get-SystemInventory {
                 }
 
                 $monitors += [pscustomobject]@{
-                    Manufacturer = (& $decode $m.ManufacturerName)   # PNP ID (DEL/SAM/ACR...)
+                    Manufacturer = (& $decode $m.ManufacturerName)
                     Name         = (& $decode $m.UserFriendlyName)
                     Model        = (& $decode $m.ProductCodeID)
                     Serial       = (& $decode $m.SerialNumberID)
@@ -650,29 +1001,107 @@ function Get-SystemInventory {
                     HeightCm     = if ($h) { [int]$h } else { $null }
                     Input        = $inputType
                     InstanceName = $m.InstanceName
+
+                    WidthPx      = $null
+                    HeightPx     = $null
+                    Resolution   = $null
+                    CurrentHz    = $null
+                    MaxHz        = $null
+                    Primary      = $false
                 }
             }
         }
     }
     catch {
-        Write-Log "Erro ao coletar informações EDID: $($_.Exception.Message)" "WARNING"
+        Write-Log "Erro ao coletar informações de monitores (EDID): $($_.Exception.Message)" "WARNING"
     }
 
-    # Anexar resolução (WinForms) aos monitores EDID por índice
-    if ($monitors.Count -gt 0 -and $WF_AllScreens.Count -gt 0) {
-        $max = [Math]::Min($monitors.Count, $WF_AllScreens.Count)
-        for ($i = 0; $i -lt $max; $i++) {
-            $monitors[$i] | Add-Member -NotePropertyName WidthPx    -NotePropertyValue $WF_AllScreens[$i].WidthPx   -Force
-            $monitors[$i] | Add-Member -NotePropertyName HeightPx   -NotePropertyValue $WF_AllScreens[$i].HeightPx  -Force
-            $monitors[$i] | Add-Member -NotePropertyName Primary    -NotePropertyValue $WF_AllScreens[$i].Primary   -Force
-            $monitors[$i] | Add-Member -NotePropertyName Resolution -NotePropertyValue ('{0}x{1}' -f $WF_AllScreens[$i].WidthPx, $WF_AllScreens[$i].HeightPx) -Force
+    # Tenta obter resolução e primário via System.Windows.Forms.Screen
+    try {
+        [void][System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+        if ([System.Windows.Forms.Screen] -as [type]) {
+            $screensDotNet = [System.Windows.Forms.Screen]::AllScreens
+            $screenInfo = @(
+                for ($i = 0; $i -lt $screensDotNet.Count; $i++) {
+                    [pscustomobject]@{
+                        Index      = $i
+                        Primary    = $screensDotNet[$i].Primary
+                        WidthPx    = $screensDotNet[$i].Bounds.Width
+                        HeightPx   = $screensDotNet[$i].Bounds.Height
+                        DeviceName = $screensDotNet[$i].DeviceName   # Ex: \\.\DISPLAY1
+                        Resolution = ('{0}x{1}' -f $screensDotNet[$i].Bounds.Width, $screensDotNet[$i].Bounds.Height)
+                    }
+                }
+            )
+        }
+        else {
+            $screenInfo = @()
         }
     }
+    catch {
+        $screenInfo = @()
+    }
+
+    # Usa DisplayHelper (Win32 API) para obter Hz por tela
+    if ($screenInfo.Count -gt 0) {
+        Ensure-DisplayHelper
+    }
+
+    if ($monitors.Count -gt 0) {
+        for ($i = 0; $i -lt $monitors.Count; $i++) {
+            $mon = $monitors[$i]
+            $scr = if ($screenInfo.Count -gt $i) { $screenInfo[$i] } else { $null }
+
+            if ($scr) {
+                $mon.WidthPx = $scr.WidthPx
+                $mon.HeightPx = $scr.HeightPx
+                $mon.Resolution = $scr.Resolution
+                $mon.Primary = $scr.Primary
+
+                # Hz atuais para essa tela
+                try {
+                    $hz = [DisplayHelper]::GetCurrentRefreshRate($scr.DeviceName)
+                }
+                catch {
+                    $hz = 0
+                }
+                if ($hz -gt 0) {
+                    $mon.CurrentHz = $hz
+                }
+
+                # Hz máximos (para essa resolução)
+                try {
+                    $maxHz = [DisplayHelper]::GetMaxRefreshRate($scr.DeviceName, $scr.WidthPx, $scr.HeightPx)
+                }
+                catch {
+                    $maxHz = 0
+                }
+                if ($maxHz -gt 0) {
+                    $mon.MaxHz = $maxHz
+                }
+            }
+            elseif ($gpuResolutionStr) {
+                # fallback caso não tenha Screen mapeada
+                $parts = $gpuResolutionStr -split 'x'
+                if ($parts.Count -eq 2) {
+                    $mon.WidthPx = [int]$parts[0]
+                    $mon.HeightPx = [int]$parts[1]
+                    $mon.Resolution = $gpuResolutionStr
+                }
+            }
+        }
+
+        # Se ainda assim ninguém estiver marcado como primário, força o primeiro
+        if (-not ($monitors | Where-Object { $_.Primary } | Select-Object -First 1)) {
+            $monitors[0].Primary = $true
+        }
+    }
+
 
     # Rede
     $netCfg = Try-Get { Get-NetIPConfiguration } "Falha ao coletar configuração de rede"
     $ipv4s = @()
-    $macs  = @()
+    $macs = @()
 
     try {
         $ipv4s = @(
@@ -695,15 +1124,13 @@ function Get-SystemInventory {
     }
     catch { }
 
-    # Detalhar adaptadores com velocidade
-    $adapters   = Try-Get { Get-NetAdapter -Physical } "Falha ao coletar adaptadores de rede"
+    $adapters = Try-Get { Get-NetAdapter -Physical } "Falha ao coletar adaptadores de rede"
     $nicDetails = @()
 
     if ($adapters) {
         foreach ($na in $adapters) {
             $alias = $na.Name
 
-            # IPv4s desse adaptador (por alias)
             $ipsForAlias = @()
             try {
                 $ipsForAlias = @(
@@ -715,19 +1142,18 @@ function Get-SystemInventory {
             }
             catch { }
 
-            # LinkSpeed direto do NetAdapter (ex.: "1 Gbps"); se não vier, faz fallback para WMI (Speed em bps)
             $speedHuman = $na.LinkSpeed
             if (-not $speedHuman -or $speedHuman -eq '0 bps') {
                 try {
                     $wmi = Get-CimInstance Win32_NetworkAdapter -Filter "NetEnabled=True AND PhysicalAdapter=True" |
-                           Where-Object { $_.PNPDeviceID -eq $na.PnPDeviceID }
+                    Where-Object { $_.PNPDeviceID -eq $na.PnPDeviceID }
 
                     $bps = $wmi.Speed
                     if ($bps) {
-                        if     ($bps -ge 1e9) { $speedHuman = ('{0:N0} Gbps' -f ($bps / 1e9)) }
+                        if ($bps -ge 1e9) { $speedHuman = ('{0:N0} Gbps' -f ($bps / 1e9)) }
                         elseif ($bps -ge 1e6) { $speedHuman = ('{0:N0} Mbps' -f ($bps / 1e6)) }
                         elseif ($bps -ge 1e3) { $speedHuman = ('{0:N0} Kbps' -f ($bps / 1e3)) }
-                        else                   { $speedHuman = ('{0} bps'   -f $bps) }
+                        else { $speedHuman = ('{0} bps' -f $bps) }
                     }
                 }
                 catch { }
@@ -743,15 +1169,24 @@ function Get-SystemInventory {
         }
     }
 
-    # Uptime/CPU/GPU
-    $boot    = $os.LastBootUpTime
-    $uptime  = Get-UptimeString $boot
+    # Uptime/CPU
+    $boot = $os.LastBootUpTime
+    $uptime = Get-UptimeString $boot
     $cpuMain = $cpu | Select-Object -First 1
-    $gpuMain = $gpu | Select-Object -First 1
 
     # Temperaturas
     $acpiMaxC = $null
     $diskMaxC = $null
+    $lhmSummary = [pscustomobject]@{
+        CPU       = $null
+        GPU       = $null
+        RAM       = $null
+        Storage   = $null
+        Mainboard = $null
+        Chipset   = $null
+        Sensors   = @()
+    }
+
     if (-not $SkipTemps) {
         $acpiTemps = Try-Get {
             Get-CimInstance -Namespace 'root/wmi' -ClassName 'MSAcpi_ThermalZoneTemperature'
@@ -766,7 +1201,6 @@ function Get-SystemInventory {
                 Get-StorageReliabilityCounter -ErrorAction Stop | Where-Object { $_.Temperature -ne $null }
             }
             catch {
-                # Fallback para WMI
                 Get-CimInstance -Namespace root\microsoft\windows\storage -ClassName MSFT_PhysicalDisk -ErrorAction SilentlyContinue |
                 Where-Object { $_.Temperature -ne $null }
             }
@@ -776,19 +1210,33 @@ function Get-SystemInventory {
             $t = ($storRel | Where-Object Temperature -ne $null | Measure-Object Temperature -Maximum).Maximum
             if ($t -ne $null) { $diskMaxC = [int]$t }
         }
+
+        $lhmSummary = Get-LHMCategoryTemperatures -DllPath $script:LibreHW_DefaultPath
     }
 
     $tempsArray = @()
     if ($acpiMaxC -ne $null) { $tempsArray += $acpiMaxC }
     if ($diskMaxC -ne $null) { $tempsArray += $diskMaxC }
+
+    foreach ($v in @(
+            $lhmSummary.CPU,
+            $lhmSummary.GPU,
+            $lhmSummary.RAM,
+            $lhmSummary.Storage,
+            $lhmSummary.Mainboard,
+            $lhmSummary.Chipset
+        )) {
+        if ($v -ne $null) { $tempsArray += $v }
+    }
+
     $maxTemp = if ($tempsArray.Count -gt 0) { ($tempsArray | Measure-Object -Maximum).Maximum } else { $null }
 
     # Verificação de alertas
     $warns = @()
     $crits = @()
 
-    $totalRAM   = if ($cs.TotalPhysicalMemory) { To-GB $cs.TotalPhysicalMemory } else { $null }
-    $freeRAM    = $null
+    $totalRAM = if ($cs.TotalPhysicalMemory) { To-GB $cs.TotalPhysicalMemory } else { $null }
+    $freeRAM = $null
     $freeRAMpct = $null
 
     if ($os -and $os.FreePhysicalMemory) {
@@ -796,7 +1244,6 @@ function Get-SystemInventory {
         if ($totalRAM) { $freeRAMpct = Percent $freeRAM $totalRAM }
     }
 
-    # Alertas de RAM
     if ($totalRAM -and $freeRAM -ne $null) {
         if ($freeRAMpct -lt 10 -or $freeRAM -lt 1.0) {
             $crits += "RAM livre muito baixa"
@@ -806,8 +1253,7 @@ function Get-SystemInventory {
         }
     }
 
-    # Alertas de disco (apenas volumes significativos filtrados acima)
-    $lowDisks  = $volumes | Where-Object { $_.FreePercent -lt 10 -or $_.FreeGB -lt 10 }
+    $lowDisks = $volumes | Where-Object { $_.FreePercent -lt 10 -or $_.FreeGB -lt 10 }
     $warnDisks = $volumes | Where-Object { $_.FreePercent -lt $MinDiskFreePercent -or $_.FreeGB -lt $MinDiskFreeGB }
     if ($lowDisks.Count -gt 0) {
         $crits += "Pouco espaço em disco"
@@ -816,7 +1262,6 @@ function Get-SystemInventory {
         $warns += "Pouco espaço em disco"
     }
 
-    # Alertas de temperatura
     if ($maxTemp -ne $null) {
         if ($maxTemp -ge $HighTempCritC) {
             $crits += "Temperatura elevada"
@@ -826,9 +1271,8 @@ function Get-SystemInventory {
         }
     }
 
-    # Alertas de processos
     if ($processInfo) {
-        $highCPUProcesses    = $processInfo | Where-Object { $_.CPU -gt $MaxProcessCPU }
+        $highCPUProcesses = $processInfo | Where-Object { $_.CPU -gt $MaxProcessCPU }
         $highMemoryProcesses = $processInfo | Where-Object { $_.MemoryMB -gt $MaxProcessMemoryMB }
 
         if ($highCPUProcesses.Count -gt 0) {
@@ -840,7 +1284,6 @@ function Get-SystemInventory {
         }
     }
 
-    # Alertas de serviços
     if ($serviceInfo) {
         $stoppedServices = $serviceInfo | Where-Object { $_.Status -ne "Running" }
         if ($stoppedServices.Count -gt 0) {
@@ -849,10 +1292,9 @@ function Get-SystemInventory {
     }
 
     $Status = if ($crits.Count -gt 0) { "Crítico" }
-              elseif ($warns.Count -gt 0) { "Atenção" }
-              else { "OK" }
+    elseif ($warns.Count -gt 0) { "Atenção" }
+    else { "OK" }
 
-    # Montagem do objeto de relatório
     $report = [pscustomobject]@{
         Hostname       = $computer
         TimestampUtc   = (Get-Date).ToUniversalTime().ToString("o")
@@ -901,27 +1343,17 @@ function Get-SystemInventory {
             DriverVersion  = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
             DriverDate     = if ($gpuMain) { $gpuMain.DriverDate }    else { $null }
             VRAM_GB        = if ($gpuMain -and $gpuMain.AdapterRAM) {
-                                [math]::Round($gpuMain.AdapterRAM / 1GB, 2)
-                             }
-                             else { $null }
-            Resolution     = if ($gpuMain -and
-                                 $gpuMain.CurrentHorizontalResolution -and
-                                 $gpuMain.CurrentVerticalResolution) {
-                                '{0}x{1}' -f $gpuMain.CurrentHorizontalResolution, $gpuMain.CurrentVerticalResolution
-                             }
-                             elseif ($WF_PrimaryRes) {
-                                $WF_PrimaryRes
-                             }
-                             else {
-                                $null
-                             }
-            RefreshRate    = if ($gpuMain) { "$($gpuMain.CurrentRefreshRate)Hz" } else { $null }
-            MaxRefreshRate = if ($gpuMain) { "$($gpuMain.MaxRefreshRate)Hz"      } else { $null }
+                [math]::Round($gpuMain.AdapterRAM / 1GB, 2)
+            }
+            else { $null }
+            Resolution     = $gpuResolutionStr
+            RefreshRate    = if ($gpuCurrentHz) { "$gpuCurrentHz`Hz" } else { $null }
+            MaxRefreshRate = if ($gpuMaxHz) { "$gpuMaxHz`Hz" } else { $null }
         }
         Monitor        = [pscustomobject]@{
             Count           = ($monitors | Measure-Object).Count
             Monitors        = @($monitors)
-            WinFormsScreens = @($WF_AllScreens)
+            WinFormsScreens = @($screenInfo)
         }
         RAM            = [pscustomobject]@{
             TotalGB     = $totalRAM
@@ -942,6 +1374,33 @@ function Get-SystemInventory {
             ACPI_MaxC = $acpiMaxC
             Disk_MaxC = $diskMaxC
             MaxC      = $maxTemp
+            LibreHW   = [pscustomobject]@{
+                CPU       = [pscustomobject]@{
+                    ValueC  = $lhmSummary.CPU
+                    Display = (Format-TempDisplay $lhmSummary.CPU)
+                }
+                GPU       = [pscustomobject]@{
+                    ValueC  = $lhmSummary.GPU
+                    Display = (Format-TempDisplay $lhmSummary.GPU)
+                }
+                RAM       = [pscustomobject]@{
+                    ValueC  = $lhmSummary.RAM
+                    Display = (Format-TempDisplay $lhmSummary.RAM)
+                }
+                Storage   = [pscustomobject]@{
+                    ValueC  = $lhmSummary.Storage
+                    Display = (Format-TempDisplay $lhmSummary.Storage)
+                }
+                Mainboard = [pscustomobject]@{
+                    ValueC  = $lhmSummary.Mainboard
+                    Display = (Format-TempDisplay $lhmSummary.Mainboard)
+                }
+                Chipset   = [pscustomobject]@{
+                    ValueC  = $lhmSummary.Chipset
+                    Display = (Format-TempDisplay $lhmSummary.Chipset)
+                }
+                Sensors   = @($lhmSummary.Sensors)
+            }
         }
         Processes      = @($processInfo)
         Services       = @($serviceInfo)
@@ -954,11 +1413,9 @@ function Get-SystemInventory {
 }
 
 # ----------------- Execução principal -----------------
-
 function Invoke-InventoryRun {
     $runStartTime = Get-Date
     try {
-        # Preparação do ambiente
         New-Dir $RepoRoot
 
         Write-Log "Iniciando inventário de TI - Versão $scriptVersion"
@@ -967,32 +1424,82 @@ function Invoke-InventoryRun {
         Write-Log "Usuário: $env:USERNAME"
         Write-Log "Admin: $(Test-Admin)"
 
-        # Coletar dados do sistema
         $report = Get-SystemInventory
 
-        # Persistência por host + manifesto (se não desabilitado)
+        try {
+            if ($report -and $report.Temps -and $report.Temps.LibreHW) {
+                $lhm = $report.Temps.LibreHW
+
+                if ($lhm.Sensors -and $lhm.Sensors.Count -eq 1) {
+                    $src = $lhm.Sensors[0]
+
+                    foreach ($field in 'CPU', 'GPU', 'RAM', 'Storage', 'Mainboard', 'Chipset') {
+                        if ($src.PSObject.Properties.Name -contains $field) {
+                            $lhm.$field = $src.$field
+                        }
+                    }
+
+                    if ($src.PSObject.Properties.Name -contains 'Sensors') {
+                        $lhm.Sensors = $src.Sensors
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Log "Falha ao normalizar estrutura de temperaturas (LibreHardwareMonitor): $($_.Exception.Message)" "WARNING"
+        }
+
+        try {
+            if ($report -and $report.Temps) {
+                $maxList = @()
+
+                if ($null -ne $report.Temps.ACPI_MaxC) {
+                    $maxList += [double]$report.Temps.ACPI_MaxC
+                }
+
+                if ($null -ne $report.Temps.Disk_MaxC) {
+                    $maxList += [double]$report.Temps.Disk_MaxC
+                }
+
+                if ($report.Temps.LibreHW) {
+                    $lhm = $report.Temps.LibreHW
+
+                    foreach ($field in 'CPU', 'GPU', 'RAM', 'Storage', 'Mainboard', 'Chipset') {
+                        if ($lhm.$field -and $null -ne $lhm.$field.ValueC) {
+                            $maxList += [double]$lhm.$field.ValueC
+                        }
+                    }
+                }
+
+                if ($maxList.Count -gt 0) {
+                    $report.Temps.MaxC = ($maxList | Measure-Object -Maximum).Maximum
+                }
+            }
+        }
+        catch {
+            Write-Log "Falha ao recalcular Temps.MaxC: $($_.Exception.Message)" "WARNING"
+        }
+
         if (-not $DisableJSON) {
-            $root         = $RepoRoot.TrimEnd('\', '/')
-            $machinesDir  = Join-Path $root "machines"
+            $root = $RepoRoot.TrimEnd('\', '/')
+            $machinesDir = Join-Path $root "machines"
             $manifestPath = Join-Path $root "manifest.json"
-            $lockPath     = Join-Path $root ".manifest.lock"
+            $lockPath = Join-Path $root ".manifest.lock"
 
             New-Dir $root
             New-Dir $machinesDir
 
-            # 1) Grava o JSON do host
             $hostJsonPath = Join-Path $machinesDir ("{0}.json" -f $computer)
-            $jsonHost     = ($report | ConvertTo-Json -Depth 12)
+            $jsonHost = ($report | ConvertTo-Json -Depth 12)
             AtomicWrite-Text -path $hostJsonPath -content $jsonHost
 
-            # 2) Atualiza o manifesto com lock
             $lockStream = Acquire-Lock -lockPath $lockPath -tries $LockMaxTries -sleepMs $LockSleepMs
             if ($lockStream) {
                 try {
                     $manifest = @()
                     if (Test-Path -LiteralPath $manifestPath) {
                         try {
-                            $raw  = Get-Content -Raw -Path $manifestPath -Encoding UTF8
+                            $raw = Get-Content -Raw -Path $manifestPath -Encoding UTF8
                             $trim = $raw.Trim()
                             if ($trim.StartsWith("[")) {
                                 $manifest = $raw | ConvertFrom-Json -ErrorAction Stop
@@ -1023,13 +1530,11 @@ function Invoke-InventoryRun {
                     }
                     if ($idx -ge 0) { $manifest[$idx] = $entry } else { $manifest += $entry }
 
-                    # Ordena por severidade e hostname
                     $manifest = @(
                         $manifest |
                         Sort-Object @{ Expression = { Get-SeverityWeight $_.Status }; Descending = $true }, Hostname
                     )
 
-                    # Grava como ARRAY
                     $manifestJson = ConvertTo-JsonForceArray -Collection $manifest -Depth 6
                     AtomicWrite-Text -path $manifestPath -content $manifestJson
                 }
@@ -1039,7 +1544,7 @@ function Invoke-InventoryRun {
             }
         }
 
-        $endTime  = Get-Date
+        $endTime = Get-Date
         $duration = $endTime - $runStartTime
         Write-Log "Inventário concluído com sucesso em $([math]::Round($duration.TotalSeconds, 2)) segundos"
 
@@ -1052,7 +1557,6 @@ function Invoke-InventoryRun {
     }
 }
 
-# Loop de execução (único ou contínuo)
 if ($IntervaloExecucao -gt 0) {
     while ($true) {
         if (-not (Invoke-InventoryRun)) {

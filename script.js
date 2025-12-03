@@ -298,7 +298,7 @@ function createMachineCard(machine) {
           ${machine.Temps?.MaxC ? `
           <div class="info-item">
             <div class="info-label"><i class="fas fa-thermometer-half"></i> Temperatura</div>
-            <div>Máxima: ${machine.Temps.MaxC}°C</div>
+            <div>Temperatura: ${machine.Temps.MaxC}°C</div>
           </div>
           ` : ''}
         </div>
@@ -388,7 +388,8 @@ function createDetailsContent(machine) {
           <div class="detail-section">
             <h4><i class="fas fa-desktop"></i> Computador</h4>
             <p><strong>Marca: </strong>${machine.Computer?.Manufacturer || 'N/A'}</p>
-            <p><strong>Modelo: </strong>${machine.Computer?.Family || 'N/A'}</p>
+            <p><strong>Modelo (Família): </strong>${machine.Computer?.Family || 'N/A'}</p>
+            <p><strong>Modelo (Código): </strong>${machine.Computer?.Model || 'N/A'}</p>
             <p><strong>S/N: </strong>${machine.Computer?.Serial || 'N/A'}</p>
             <p><strong>Bios Versão: </strong>${machine.BIOS?.Version || 'N/A'}</p>
             <p><strong>Placa Mãe: </strong>${machine.BaseBoard?.Product || 'N/A'}</p>
@@ -460,7 +461,7 @@ function createDetailsContent(machine) {
               <div class="detail-section">
                       <h4><i class="fas fa-hdd"></i> Armazenamento</h4>
                       <h5>Volumes:</h5>
-                      `
+                      `;
   machine.Storage?.Volumes?.forEach(volume => {
     detailsHTML += `
                       <div style="margin-left: 20px; margin-bottom: 10px;">
@@ -468,7 +469,7 @@ function createDetailsContent(machine) {
                         <p><strong>Sistema de Arquivos:</strong> ${volume.FileSystem || 'N/A'}</p>
                         <p><strong>Capacidade:</strong> ${volume.SizeGB || 'N/A'} GB | Livre: ${volume.FreeGB || 'N/A'} GB (${volume.FreePercent || 'N/A'}%)</p>
                       </div>
-                      <br/>`
+                      <br/>`;
   });
   detailsHTML += `<h5>Discos:</h5>`;
   machine.Storage?.Disks?.forEach(disk => {
@@ -490,13 +491,41 @@ function createDetailsContent(machine) {
                           <p><strong>Nome:</strong> ${mon.Name || mon.Model || mon.Manufacturer || 'N/A'} ${mon.Primary ? '(Primário)' : ''}</p>
                           <p><strong>S/N:</strong> ${mon.Serial || 'N/A'}</p>
                           <p><strong>Tamanho:</strong> ${mon.SizeInches ? mon.SizeInches + '″' : 'N/A'}${mon.WidthCm ? ` (${mon.WidthCm}×${mon.HeightCm || 'N/A'} cm)` : ''}</p>
-                          <p><strong>Resolução:</strong> ${mon?.Resolution ? mon.Resolution : (mon?.WidthPx && mon?.HeightPx) ? `${mon.WidthPx}x${mon.HeightPx}` : (machine.GPU?.Resolution || 'N/A')}</p>
-                          <p><strong>Taxa de Atualização Atual:</strong> ${machine.GPU?.RefreshRate || 'N/A'}</p>
-                          <p><strong>Taxa de Atualização Máxima Suportada: ${machine.GPU?.MaxRefreshRate || 'N/A'}</p>
+                          <p><strong>Resolução:</strong> ${
+                            mon?.Resolution
+                              ? mon.Resolution
+                              : (mon?.WidthPx && mon?.HeightPx)
+                                ? `${mon.WidthPx}x${mon.HeightPx}`
+                                : (machine.GPU?.Resolution || 'N/A')
+                          }</p>
+                          <p><strong>Taxa de Atualização Atual:</strong> ${
+                            mon?.CurrentHz
+                              ? mon.CurrentHz + ' Hz'
+                              : (machine.GPU?.RefreshRate || 'N/A')
+                          }</p>
+                          <p><strong>Taxa de Atualização Máxima Suportada:</strong> ${
+                            mon?.MaxHz
+                              ? mon.MaxHz + ' Hz'
+                              : (machine.GPU?.MaxRefreshRate || 'N/A')
+                          }</p>
                           <br/>
                         </div>
                       `).join('') : '<p>N/A</p>'}
                  </div>
+
+                 <div class="detail-section">
+                   <h4><i class="fas fa-thermometer-half"></i> Temperaturas (LibreHardwareMonitor)</h4>
+                   <p><strong>Máxima geral:</strong> ${machine.Temps?.MaxC ?? 'N/A'} °C</p>
+                   <ul>
+                     <li><strong>CPU:</strong> ${machine.Temps?.LibreHW?.CPU?.Display || 'N/A'}</li>
+                     <li><strong>GPU:</strong> ${machine.Temps?.LibreHW?.GPU?.Display || 'N/A'}</li>
+                     <li><strong>RAM:</strong> ${machine.Temps?.LibreHW?.RAM?.Display || 'N/A'}</li>
+                     <li><strong>Armazenamento:</strong> ${machine.Temps?.LibreHW?.Storage?.Display || 'N/A'}</li>
+                     <li><strong>Placa-mãe:</strong> ${machine.Temps?.LibreHW?.Mainboard?.Display || 'N/A'}</li>
+                     <li><strong>Chipset:</strong> ${machine.Temps?.LibreHW?.Chipset?.Display || 'N/A'}</li>
+                   </ul>
+                 </div>
+
               </div>`;
 
   // Software
@@ -515,7 +544,7 @@ function createDetailsContent(machine) {
                     <tr>
                       <th>Nome</th>
                       <th>PID</th>
-                      <th>CPU %</th>
+                      <th>CPU (s)</th>
                       <th>Memória (MB)</th>
                     </tr>
                   </thead>
@@ -617,7 +646,7 @@ function createDetailsContent(machine) {
           <div class="tab-content" id="tab-network">
       `;
 
-  // >>> NOVO: Tabela de adaptadores com velocidade
+  // Tabela de adaptadores com velocidade
   if (machine.Network?.Adapters && machine.Network.Adapters.length > 0) {
     detailsHTML += `
     <div class="detail-section">
@@ -648,7 +677,6 @@ function createDetailsContent(machine) {
       </div>
     </div>
   `;
-    // <<< FIM NOVO >>>
   }
 
   // Eventos
@@ -953,7 +981,7 @@ function updateStatusChart() {
     options: {
       responsive: true,
 
-      // ✅ NOVO: clique no gráfico filtra por status
+      // clique no gráfico filtra por status
       onClick: (evt, elements, chart) => {
         const statusSelect = document.getElementById('status-filter');
         if (!statusSelect) return;
@@ -1189,7 +1217,7 @@ function filterMachines() {
   const statusFilter = document.getElementById('status-filter').value;
   const sortBy = document.getElementById('sort-by').value;
 
-  // ✅ Novo: filtro por tipo de armazenamento (HDD)
+  // filtro por tipo de armazenamento (HDD)
   const storageFilterEl = document.getElementById('storage-filter');
   const storageFilter = storageFilterEl ? storageFilterEl.value : 'all';
 
@@ -1258,7 +1286,7 @@ function formatDateMS(dateString) {
   if (!dateString) return 'N/A';
   try {
     // Tenta extrair timestamp se for no formato /Date(1234567890123)/
-    const match = dateString.match(/\/Date\((\d+)\)\//);
+    const match = String(dateString).match(/\/Date\((\d+)\)\//);
     let timestamp;
 
     if (match && match[1]) {
@@ -1372,12 +1400,11 @@ function initEvents() {
   // Botão de tema
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
-  // ✅ Logo "Central de Análise de TI" volta para a página principal (Dashboard)
+  // Logo volta para a página principal (Dashboard)
   const homeLogo = document.getElementById('home-logo');
   if (homeLogo) {
     homeLogo.addEventListener('click', () => {
       switchView('dashboard');
-      // opcional: rolar para o topo
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
@@ -1397,13 +1424,10 @@ function initEvents() {
 
       // Reaplica a view atual com base nos novos dados
       if (currentView === 'machines') {
-        // reaplica filtros atuais (busca, status, etc.)
         filterMachines();
       } else if (currentView === 'alerts') {
-        // lista de alertas baseada em allAlerts atualizado
         renderAlertsPanel();
       } else if (currentView === 'dashboard') {
-        // garantimos que tudo da dashboard está atualizado
         updateStats();
         updateResourcesChart();
         updateStatusChart();
@@ -1456,12 +1480,11 @@ function initEvents() {
     });
   }
 
-  // ✅ Novo: filtro por tipo de armazenamento
+  // Filtro por tipo de armazenamento
   const storageFilter = document.getElementById('storage-filter');
   if (storageFilter) {
     storageFilter.addEventListener('change', filterMachines);
   }
-
 
   // Botões de visualização
   document.getElementById('view-dashboard').addEventListener('click', () => switchView('dashboard'));
@@ -1497,7 +1520,7 @@ function initEvents() {
     document.body.style.overflow = 'auto';
   });
 
-  // ✅ Fechar QUALQUER modal clicando fora dele
+  // Fechar QUALQUER modal clicando fora dele
   window.addEventListener('click', (event) => {
     if (event.target.classList && event.target.classList.contains('modal')) {
       event.target.style.display = 'none';
@@ -1505,7 +1528,7 @@ function initEvents() {
     }
   });
 
-  // ✅ Fechar QUALQUER modal com ESC
+  // Fechar QUALQUER modal com ESC
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       document.querySelectorAll('.modal').forEach(m => {
@@ -1516,8 +1539,6 @@ function initEvents() {
       document.body.style.overflow = 'auto';
     }
   });
-
-
 
   // Tabs de detalhes
   document.addEventListener('click', function (e) {
@@ -1574,11 +1595,11 @@ function exportCSV() {
 
 // Inicializar a aplicação
 document.addEventListener('DOMContentLoaded', () => {
-  // ✅ Focar automaticamente na barra de pesquisa
+  // Focar automaticamente na barra de pesquisa
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.focus();
-    searchInput.select(); // opcional: já seleciona o texto, se houver
+    searchInput.select();
   }
 
   fetchConfig().then((config) => {
