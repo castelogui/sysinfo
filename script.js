@@ -514,7 +514,7 @@ function createDetailsContent(machine) {
                  </div>
 
                  <div class="detail-section">
-                   <h4><i class="fas fa-thermometer-half"></i> Temperaturas (LibreHardwareMonitor)</h4>
+                   <h4><i class="fas fa-thermometer-half"></i> Temperaturas</h4>
                    <p><strong>Máxima geral:</strong> ${machine.Temps?.MaxC ?? 'N/A'} °C</p>
                    <ul>
                      <li><strong>CPU:</strong> ${machine.Temps?.LibreHW?.CPU?.Display || 'N/A'}</li>
