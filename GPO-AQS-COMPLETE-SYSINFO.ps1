@@ -1,10 +1,8 @@
-﻿# <#
-#  GPO-AQS-COMPLETE-SYSINFO.ps1
+﻿#  GPO-AQS-COMPLETE-SYSINFO.ps1
 #  - Coleta inventário local avançado
 #  - Suporte a múltiplos modos de coleta e armazenamento
 #  - Persistência histórica e alertas avançados
 #  Requisitos: Windows PowerShell 5.1
-#>
 
 param(
     [string]$RepoRoot = "\\192.168.16.3\brasilsuperatacado\sysinfo",
@@ -167,6 +165,132 @@ function Write-Log {
         "WARNING" { Write-Warning $logEntry }
         default { Write-Host    $logEntry }
     }
+}
+function Get-GpuVramBytes {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [object]$Gpu
+    )
+
+    function Convert-RegValueToInt64 {
+        param([object]$Value)
+
+        if ($null -eq $Value) { return $null }
+
+        # REG_BINARY -> byte[]
+        if ($Value -is [byte[]]) {
+            if ($Value.Length -ge 8) {
+                return [int64][BitConverter]::ToUInt64($Value, 0)  # 8 bytes (little-endian)
+            }
+            elseif ($Value.Length -ge 4) {
+                return [int64][BitConverter]::ToUInt32($Value, 0)  # 4 bytes
+            }
+            else {
+                return $null
+            }
+        }
+
+        # Tipos numéricos
+        if ($Value -is [int64] -or $Value -is [uint64] -or $Value -is [int32] -or $Value -is [uint32]) {
+            return [int64]$Value
+        }
+
+        # String numérica (fallback)
+        $s = [string]$Value
+        [int64]$out = 0
+        if ([int64]::TryParse($s, [ref]$out)) { return $out }
+
+        return $null
+    }
+
+    if (-not $Gpu) { return $null }
+
+    # Valor atual (pode vir "capado" em ~4GB)
+    $adapterRam = $null
+    try { $adapterRam = [int64]$Gpu.AdapterRAM } catch { }
+
+    $pnp = $Gpu.PNPDeviceID
+    $venDev = $null
+    if ($pnp -match 'VEN_[0-9A-Fa-f]{4}&DEV_[0-9A-Fa-f]{4}') {
+        $venDev = $matches[0].ToUpperInvariant()
+    }
+
+    # 1) Class GUID de Display Adapters
+    $classBase = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+    $classKeys = @()
+    try { $classKeys = @(Get-ChildItem -Path $classBase -ErrorAction SilentlyContinue) } catch { $classKeys = @() }
+
+    foreach ($k in $classKeys) {
+        $p = Get-ItemProperty -Path $k.PSPath -ErrorAction SilentlyContinue
+        if (-not $p) { continue }
+
+        $isMatch = $false
+
+        if ($venDev -and $p.PSObject.Properties.Name -contains 'MatchingDeviceId' -and $p.MatchingDeviceId) {
+            if ($p.MatchingDeviceId.ToUpperInvariant().Contains($venDev)) { $isMatch = $true }
+        }
+
+        if (-not $isMatch -and $Gpu.Name -and $p.PSObject.Properties.Name -contains 'DriverDesc' -and $p.DriverDesc) {
+            if ($p.DriverDesc -eq $Gpu.Name) { $isMatch = $true }
+        }
+
+        if (-not $isMatch) { continue }
+
+        $mem = $null
+        if ($p.PSObject.Properties.Name -contains 'HardwareInformation.qwMemorySize') {
+            $mem = $p.'HardwareInformation.qwMemorySize'
+        }
+        elseif ($p.PSObject.Properties.Name -contains 'HardwareInformation.MemorySize') {
+            $mem = $p.'HardwareInformation.MemorySize'
+        }
+
+        $mem64 = Convert-RegValueToInt64 $mem
+        if ($mem64 -ne $null -and $mem64 -gt 0) { return $mem64 }
+    }
+
+    # 2) Fallback: Control\Video
+    $videoBase = 'HKLM:\SYSTEM\CurrentControlSet\Control\Video'
+    $videoGuids = @()
+    try { $videoGuids = @(Get-ChildItem -Path $videoBase -ErrorAction SilentlyContinue) } catch { $videoGuids = @() }
+
+    foreach ($g in $videoGuids) {
+        foreach ($sub in @('0000', '0001')) {
+            $kp = Join-Path $g.PSPath $sub
+            $p = Get-ItemProperty -Path $kp -ErrorAction SilentlyContinue
+            if (-not $p) { continue }
+
+            $isMatch = $false
+
+            if ($Gpu.Name) {
+                $adapterStr = $null
+                if ($p.PSObject.Properties.Name -contains 'HardwareInformation.AdapterString') {
+                    $adapterStr = $p.'HardwareInformation.AdapterString'
+                }
+                if ($adapterStr -and $adapterStr -like "*$($Gpu.Name)*") { $isMatch = $true }
+            }
+
+            if (-not $isMatch -and $venDev -and $p.PSObject.Properties.Name -contains 'MatchingDeviceId' -and $p.MatchingDeviceId) {
+                if ($p.MatchingDeviceId.ToUpperInvariant().Contains($venDev)) { $isMatch = $true }
+            }
+
+            if (-not $isMatch) { continue }
+
+            $mem = $null
+            if ($p.PSObject.Properties.Name -contains 'HardwareInformation.qwMemorySize') {
+                $mem = $p.'HardwareInformation.qwMemorySize'
+            }
+            elseif ($p.PSObject.Properties.Name -contains 'HardwareInformation.MemorySize') {
+                $mem = $p.'HardwareInformation.MemorySize'
+            }
+
+            $mem64 = Convert-RegValueToInt64 $mem
+            if ($mem64 -ne $null -and $mem64 -gt 0) { return $mem64 }
+        }
+    }
+
+    # Último fallback
+    return $adapterRam
 }
 
 function Test-Admin {
@@ -782,12 +906,12 @@ function Get-LHMCategoryTemperatures {
     }
 
     return [pscustomobject]@{
-        CPU       = if ($summary.CPU       -and $summary.CPU.ValueC       -ne $null) { [double]$summary.CPU.ValueC }       else { $null }
-        GPU       = if ($summary.GPU       -and $summary.GPU.ValueC       -ne $null) { [double]$summary.GPU.ValueC }       else { $null }
-        RAM       = if ($summary.RAM       -and $summary.RAM.ValueC       -ne $null) { [double]$summary.RAM.ValueC }       else { $null }
-        Storage   = if ($summary.Storage   -and $summary.Storage.ValueC   -ne $null) { [double]$summary.Storage.ValueC }   else { $null }
+        CPU       = if ($summary.CPU -and $summary.CPU.ValueC -ne $null) { [double]$summary.CPU.ValueC }       else { $null }
+        GPU       = if ($summary.GPU -and $summary.GPU.ValueC -ne $null) { [double]$summary.GPU.ValueC }       else { $null }
+        RAM       = if ($summary.RAM -and $summary.RAM.ValueC -ne $null) { [double]$summary.RAM.ValueC }       else { $null }
+        Storage   = if ($summary.Storage -and $summary.Storage.ValueC -ne $null) { [double]$summary.Storage.ValueC }   else { $null }
         Mainboard = if ($summary.Mainboard -and $summary.Mainboard.ValueC -ne $null) { [double]$summary.Mainboard.ValueC } else { $null }
-        Chipset   = if ($summary.Chipset   -and $summary.Chipset.ValueC   -ne $null) { [double]$summary.Chipset.ValueC }   else { $null }
+        Chipset   = if ($summary.Chipset -and $summary.Chipset.ValueC -ne $null) { [double]$summary.Chipset.ValueC }   else { $null }
         Sensors   = @($summary.Sensors)
     }
 }
@@ -996,6 +1120,10 @@ function Get-SystemInventory {
 
     if ($gpu) {
         $gpuMain = $gpu | Select-Object -First 1
+        $gpuVramBytes = $null
+        if ($gpuMain) {
+            $gpuVramBytes = Get-GpuVramBytes -Gpu $gpuMain
+        }
 
         if ($gpuMain.CurrentHorizontalResolution -and $gpuMain.CurrentVerticalResolution) {
             $gpuResolutionStr = '{0}x{1}' -f $gpuMain.CurrentHorizontalResolution, $gpuMain.CurrentVerticalResolution
@@ -1711,14 +1839,15 @@ function Get-SystemInventory {
             Name           = if ($gpuMain) { $gpuMain.Name }          else { $null }
             DriverVersion  = if ($gpuMain) { $gpuMain.DriverVersion } else { $null }
             DriverDate     = if ($gpuMain) { $gpuMain.DriverDate }    else { $null }
-            VRAM_GB        = if ($gpuMain -and $gpuMain.AdapterRAM) {
-                [math]::Round($gpuMain.AdapterRAM / 1GB, 2)
-            }
-            else { $null }
+
+            VRAM_Bytes     = $gpuVramBytes
+            VRAM_GB        = if ($gpuVramBytes -and $gpuVramBytes -gt 0) { [math]::Round($gpuVramBytes / 1GB, 2) } else { $null }
+
             Resolution     = $gpuResolutionStr
             RefreshRate    = if ($gpuCurrentHz) { "$gpuCurrentHz`Hz" } else { $null }
             MaxRefreshRate = if ($gpuMaxHz) { "$gpuMaxHz`Hz" } else { $null }
         }
+
         Monitor        = [pscustomobject]@{
             Count           = ($monitors | Measure-Object).Count
             Monitors        = @($monitors)
